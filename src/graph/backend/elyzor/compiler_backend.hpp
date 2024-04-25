@@ -37,7 +37,7 @@ class compiler_backend_t : public backend_t {
 
 public:
     static compiler_backend_t &get_singleton() {
-        static compiler_backend_t ins("elyzor_compiler_backend", /*priority*/ 2.f);
+        static compiler_backend_t ins("elyzor_compiler_backend", /*priority*/ 3.f);
         return ins;
     }
 
