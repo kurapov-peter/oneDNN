@@ -59,8 +59,12 @@ inline dims get_dense_strides(const dims &shape) {
     return strides;
 }
 
+<<<<<<< HEAD
 const std::unordered_map<op_kind_t, std::string, enum_hash_t> &
 get_supported_ops();
+=======
+const std::unordered_map<op_kind_t, std::string, enum_hash_t> &get_supported_ops();
+>>>>>>> c0a4855829 (add elyzor)
 std::vector<op_kind_t> get_supported_op_kinds();
 
 #define COMPILE_ASSERT(cond, ...) \

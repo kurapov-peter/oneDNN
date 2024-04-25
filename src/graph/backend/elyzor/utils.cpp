@@ -69,7 +69,11 @@ get_supported_ops() {
                     {op_kind::HardSwish, "hardswish"},
                     {op_kind::HardSwishBackward, "hardswish_bwd"},
                     {op_kind::BatchNormInference, "batchnorm_inference"}};
+<<<<<<< HEAD
     return elyzor_backend_op;
+=======
+    return compiler_backend_op;
+>>>>>>> c0a4855829 (add elyzor)
 }
 
 std::vector<op_kind_t> get_supported_op_kinds() {
