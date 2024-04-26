@@ -26,6 +26,7 @@
 
 #include "compiler_backend.hpp"
 #include "utils.hpp"
+#include "graph_compiler.h"
 
 namespace dnnl {
 namespace impl {
@@ -118,7 +119,8 @@ public:
             const std::vector<graph::logical_tensor_t> &inputs,
             const std::vector<graph::logical_tensor_t> &outputs,
             const std::vector<graph::inplace_pair_t> &inplace_pairs,
-            const void* executor);
+            const graph_compiler_executable* exe,
+            const graph_compiler* gc);
     virtual ~compiler_compiled_partition_impl_t();
     graph::status_t execute(const graph::stream_t *astream,
             const std::vector<graph::tensor_t> &inputs,
@@ -135,7 +137,8 @@ public:
 #endif
 
 private:
-    const void* executor_;
+    const graph_compiler_executable* exe_;
+    const graph_compiler* gc_;
 };
 
 } // namespace elyzor

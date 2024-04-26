@@ -400,7 +400,12 @@ public:
         printf("onednn_graph_verbose,info,serialize graph to a json file %s\n",
                 filename.c_str());
         std::ofstream of(filename);
-        graph::utils::json::json_writer_t writer(&of);
+        return serialize(of);
+    }
+
+    // This function is used to serialize graph to a stream
+    graph::status_t serialize(std::ostream &output) const {
+        graph::utils::json::json_writer_t writer(&output);
         writer.begin_object();
         std::string version = std::to_string(dnnl_version()->major) + "."
                 + std::to_string(dnnl_version()->minor) + "."

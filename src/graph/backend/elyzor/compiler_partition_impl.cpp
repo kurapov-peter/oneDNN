@@ -139,10 +139,22 @@ graph::status_t compiler_partition_impl_t::compile(
         COMPILE_ASSERT(aengine->kind() == graph::engine_kind_t::dnnl_cpu,
                 "Graph compiler backend only supports cpu engine");
 
-        // get executor somehow
+        // TODO: maybe cache ctx and gc in a static variable
+        const graph_compiler_context ctx {/*num_threads=*/std::thread::hardware_concurrency()};
+        const graph_compiler* gc;
+        graph_compiler_create(&ctx, &gc);
+
+        std::stringstream json_stream;
+        graph::graph_t(copied_ops_).serialize(json_stream);
+
+        std::string json = json_stream.str();
+
+        const graph_compiler_executable* exe;
+        graph_compiler_compile(gc, json.data(), &exe);
 
         auto pimpl = std::make_shared<compiler_compiled_partition_impl_t>(
-                *aengine, inputs, outputs, std::vector<graph::inplace_pair_t>{}, /*executor=*/nullptr);
+                *aengine, inputs, outputs, std::vector<graph::inplace_pair_t>{}, // inplace pairs are always empty in the original GC
+                /*executor=*/exe, /*graph_compiler=*/gc);
         compiled_partition->init(pimpl);
         return res;
     } catch (const std::exception &e) {
@@ -172,19 +184,38 @@ compiler_compiled_partition_impl_t::compiler_compiled_partition_impl_t(
         const std::vector<graph::logical_tensor_t> &inputs,
         const std::vector<graph::logical_tensor_t> &outputs,
         const std::vector<graph::inplace_pair_t> &inplace_pairs,
-        const void* executor)
+        const graph_compiler_executable* exe,
+        const graph_compiler* gc)
     : graph::compiled_partition_impl_t(engine, inputs, outputs, inplace_pairs)
-    , executor_(executor) {}
+    , exe_(exe), gc_(gc) {}
 
-compiler_compiled_partition_impl_t::~compiler_compiled_partition_impl_t() {}
+compiler_compiled_partition_impl_t::~compiler_compiled_partition_impl_t() {
+    graph_compiler_destroy_executable(gc_, exe_);
+    graph_compiler_destroy(gc_);
+}
 
 graph::status_t compiler_compiled_partition_impl_t::execute(
         const graph::stream_t *astream,
         const std::vector<graph::tensor_t> &inputs,
         const std::vector<graph::tensor_t> &outputs) {
-    std::cout << "Trying to execute using Elyzor..." << std::endl;
-    // prepare args and execute
-    // run(executor_, args)
+    UNUSED(astream);
+    std::vector<graph_compiler_tensor> args;
+    args.reserve(inputs.size() + outputs.size());
+
+    for (auto& in : inputs) {
+        auto lt = in.get_logical_tensor();
+        graph_compiler_tensor tmp{lt.id, static_cast<uint8_t>(lt.ndims), {}, in.get_data_handle()};
+        std::copy(lt.dims, lt.dims + lt.ndims, tmp.dims);
+        args.push_back(tmp);
+    }
+    for (auto& out : outputs) {
+        auto lt = out.get_logical_tensor();
+        graph_compiler_tensor tmp{lt.id, static_cast<uint8_t>(lt.ndims), {}, out.get_data_handle()};
+        std::copy(lt.dims, lt.dims + lt.ndims, tmp.dims);
+        args.push_back(tmp);
+    }
+
+    graph_compiler_execute(gc_, exe_, /*inputs=*/args.data(), /*outputs=*/args.data() + inputs.size());
     return status::success;
 }
 } // namespace elyzor
