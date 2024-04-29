@@ -23,6 +23,7 @@
 #include <unordered_map>
 #include <unordered_set>
 
+#include "compiler_loader.hpp"
 #include "graph/backend/elyzor/utils.hpp"
 #include "graph/interface/backend.hpp"
 #include "graph/utils/pm/pass_manager.hpp"
@@ -37,8 +38,13 @@ class compiler_backend_t : public backend_t {
 
 public:
     static compiler_backend_t &get_singleton() {
-        static compiler_backend_t ins("elyzor_compiler_backend", /*priority*/ 3.f);
+        static compiler_backend_t ins(
+                "elyzor_compiler_backend", /*priority*/ 3.f);
         return ins;
+    }
+
+    const graph_compiler_loader &get_graph_compiler_loader() const {
+        return gc_module_;
     }
 
     bool support_engine_kind(engine_kind_t kind) const override {
@@ -73,6 +79,7 @@ private:
     static graph::pass::pass_registry_t register_passes();
 
     static graph::pass::pass_registry_t pass_registry_;
+    const graph_compiler_loader gc_module_;
 };
 
 } // namespace elyzor

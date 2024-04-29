@@ -25,6 +25,7 @@
 
 #include "common/rw_mutex.hpp"
 #include "common/verbose.hpp"
+#include "compiler_loader.hpp"
 #include "graph/interface/graph.hpp"
 #include "graph/utils/debug.hpp"
 #include "graph/utils/utils.hpp"
@@ -81,15 +82,14 @@ graph::status_t compiler_partition_impl_t::infer_shape(
         if (ret != graph::status::success) return ret;
 
         auto set_new_lt = [](graph::logical_tensor_t lt,
-                             std::shared_ptr<value_t> val) {
+                                  std::shared_ptr<value_t> val) {
             val->set_logical_tensor(lt);
             // if layout is any; let's respect it
             // if layout is strided; shape_infer will fill the stride
             // if layout is undef; convert it to strided and fill the stride
             if (lt.layout_type == graph::layout_type::undef) {
                 // force set strided dense layout
-                graph::dims shape(
-                        lt.dims, lt.dims + lt.ndims);
+                graph::dims shape(lt.dims, lt.dims + lt.ndims);
                 graph::dims strides = utils::get_dense_strides(shape);
                 val->set_strides(strides);
             }
@@ -154,25 +154,33 @@ graph::status_t compiler_partition_impl_t::compile(
                 "Graph compiler backend only supports cpu engine");
 
         // TODO: maybe cache ctx and gc in a static variable
-        const graph_compiler_context ctx {/*num_threads=*/std::thread::hardware_concurrency()};
-        const graph_compiler* gc;
-        graph_compiler_create(&ctx, &gc);
+        auto &cl = compiler_backend_t::get_singleton()
+                           .get_graph_compiler_loader();
+
+        const graph_compiler_context ctx {
+                /*num_threads=*/std::thread::hardware_concurrency()};
+        const graph_compiler *gc;
+        WRAP_GC_CALL(cl.create_gc(&ctx, &gc),
+                "Failed to create graph compiler object");
 
         std::stringstream json_stream;
         graph::graph_t(copied_ops_).serialize(json_stream);
 
         std::string json = json_stream.str();
 
-        const graph_compiler_executable* exe;
-        graph_compiler_compile(gc, json.data(), &exe);
+        const graph_compiler_executable *exe;
+        WRAP_GC_CALL(cl.compile(gc, json.data(), &exe),
+                "Failed to compile partition");
 
         auto pimpl = std::make_shared<compiler_compiled_partition_impl_t>(
-                *aengine, inputs, outputs, std::vector<graph::inplace_pair_t>{}, // inplace pairs are always empty in the original GC
+                *aengine, inputs, outputs,
+                // inplace pairs are always empty in the original GC
+                std::vector<graph::inplace_pair_t> {},
                 /*executor=*/exe, /*graph_compiler=*/gc);
         compiled_partition->init(pimpl);
         return res;
     } catch (const std::exception &e) {
-        VERROR(graph, graph_compiler, "%s", e.what());
+        VERROR(graph, elyzor, "%s", e.what());
         return graph::status::unimplemented;
     }
 }
@@ -198,39 +206,53 @@ compiler_compiled_partition_impl_t::compiler_compiled_partition_impl_t(
         const std::vector<graph::logical_tensor_t> &inputs,
         const std::vector<graph::logical_tensor_t> &outputs,
         const std::vector<graph::inplace_pair_t> &inplace_pairs,
-        const graph_compiler_executable* exe,
-        const graph_compiler* gc)
+        const graph_compiler_executable *exe, const graph_compiler *gc)
     : graph::compiled_partition_impl_t(engine, inputs, outputs, inplace_pairs)
-    , exe_(exe), gc_(gc) {}
+    , exe_(exe)
+    , gc_(gc) {}
 
 compiler_compiled_partition_impl_t::~compiler_compiled_partition_impl_t() {
-    graph_compiler_destroy_executable(gc_, exe_);
-    graph_compiler_destroy(gc_);
+    // isn't it too dangerous to call this in a descructor??
+    auto &cl = compiler_backend_t::get_singleton().get_graph_compiler_loader();
+
+    cl.destroy_exe(gc_, exe_);
+    cl.destroy_gc(gc_);
 }
 
 graph::status_t compiler_compiled_partition_impl_t::execute(
         const graph::stream_t *astream,
         const std::vector<graph::tensor_t> &inputs,
         const std::vector<graph::tensor_t> &outputs) {
-    UNUSED(astream);
-    std::vector<graph_compiler_tensor> args;
-    args.reserve(inputs.size() + outputs.size());
+    try {
+        UNUSED(astream);
+        std::vector<graph_compiler_tensor> args;
+        args.reserve(inputs.size() + outputs.size());
 
-    for (auto& in : inputs) {
-        auto lt = in.get_logical_tensor();
-        graph_compiler_tensor tmp{lt.id, static_cast<uint8_t>(lt.ndims), {}, in.get_data_handle()};
-        std::copy(lt.dims, lt.dims + lt.ndims, tmp.dims);
-        args.push_back(tmp);
-    }
-    for (auto& out : outputs) {
-        auto lt = out.get_logical_tensor();
-        graph_compiler_tensor tmp{lt.id, static_cast<uint8_t>(lt.ndims), {}, out.get_data_handle()};
-        std::copy(lt.dims, lt.dims + lt.ndims, tmp.dims);
-        args.push_back(tmp);
-    }
+        for (auto &in : inputs) {
+            auto lt = in.get_logical_tensor();
+            graph_compiler_tensor tmp {lt.id, static_cast<uint8_t>(lt.ndims),
+                    {}, in.get_data_handle()};
+            std::copy(lt.dims, lt.dims + lt.ndims, tmp.dims);
+            args.push_back(tmp);
+        }
+        for (auto &out : outputs) {
+            auto lt = out.get_logical_tensor();
+            graph_compiler_tensor tmp {lt.id, static_cast<uint8_t>(lt.ndims),
+                    {}, out.get_data_handle()};
+            std::copy(lt.dims, lt.dims + lt.ndims, tmp.dims);
+            args.push_back(tmp);
+        }
 
-    graph_compiler_execute(gc_, exe_, /*inputs=*/args.data(), /*outputs=*/args.data() + inputs.size());
-    return status::success;
+        auto &cl = compiler_backend_t::get_singleton()
+                           .get_graph_compiler_loader();
+        WRAP_GC_CALL(
+                cl.execute(gc_, exe_, args.data(), args.data() + inputs.size()),
+                "Failed to execute partition");
+        return status::success;
+    } catch (const std::exception &e) {
+        VERROR(graph, elyzor, "%s", e.what());
+        return graph::status::runtime_error;
+    }
 }
 } // namespace elyzor
 } // namespace graph
