@@ -79,20 +79,26 @@ graph::status_t elyzor_partition_impl_t::infer_shape(
         graph::status_t ret = cur_op_schema->shape_infer(
                 &temp_node, ordered_inputs, ordered_outputs);
         if (ret != graph::status::success) return ret;
-        for (size_t i = 0; i < cur_op->get_output_values().size(); ++i) {
-            auto output_lt = *ordered_outputs[i];
-            auto cur_val = cur_op->get_output_values()[i];
-            cur_val->set_logical_tensor(output_lt);
+
+        auto set_new_lt = [](graph::logical_tensor_t lt,
+                             std::shared_ptr<value_t> val) {
+            val->set_logical_tensor(lt);
             // if layout is any; let's respect it
             // if layout is strided; shape_infer will fill the stride
             // if layout is undef; convert it to strided and fill the stride
-            if (output_lt.layout_type == graph::layout_type::undef) {
+            if (lt.layout_type == graph::layout_type::undef) {
                 // force set strided dense layout
                 graph::dims shape(
-                        output_lt.dims, output_lt.dims + output_lt.ndims);
+                        lt.dims, lt.dims + lt.ndims);
                 graph::dims strides = utils::get_dense_strides(shape);
-                cur_val->set_strides(strides);
+                val->set_strides(strides);
             }
+        };
+
+        for (size_t i = 0; i < cur_op->get_output_values().size(); ++i) {
+            auto output_lt = *ordered_outputs[i];
+            auto cur_val = cur_op->get_output_values()[i];
+            set_new_lt(output_lt, cur_val);
             // only write back inferred info to outputs
             // shall not modify the layout type
             auto out_pos = std::find_if(outputs.begin(), outputs.end(),
@@ -105,6 +111,14 @@ graph::status_t elyzor_partition_impl_t::infer_shape(
                 if ((**out_pos).layout_type == graph::layout_type::any)
                     cur_lt.layout_type = (**out_pos).layout_type;
                 **out_pos = cur_lt;
+            }
+        }
+        // additionaly fill shapes for input values of the subgraph
+        for (size_t i = 0; i < cur_op->get_input_values().size(); ++i) {
+            if (!cur_op->get_input_values()[i]->has_producer()) {
+                auto input_lt = *ordered_inputs[i];
+                auto cur_val = cur_op->get_input_values()[i];
+                set_new_lt(input_lt, cur_val);
             }
         }
         return graph::status::success;

@@ -27,6 +27,8 @@
 #include "elyzor_backend.hpp"
 #include "utils.hpp"
 
+class test_elyzor_partition_impl_t;
+
 namespace dnnl {
 namespace impl {
 namespace graph {
@@ -34,6 +36,7 @@ namespace elyzor {
 
 class elyzor_partition_impl_t : public partition_impl_t {
     friend class elyzor_backend_t;
+    friend class ::test_elyzor_partition_impl_t;
 
 public:
     elyzor_partition_impl_t(graph::engine_kind_t engine_kind,
