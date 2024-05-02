@@ -110,11 +110,7 @@ inline void pattern_utils_t::set_partitions(graph::graph_t &backend_graph,
     for (auto &pairs : fusion_ops) {
         fusion_ops_set.clear();
         visit.clear();
-<<<<<<< HEAD
         auto pimpl = std::make_shared<elyzor_partition_impl_t>(
-=======
-        auto pimpl = std::make_shared<compiler_partition_impl_t>(
->>>>>>> c0a4855829 (add elyzor)
                 backend_graph.get_engine_kind(),
                 backend_graph.get_fpmath_mode(), pkind, pname);
 

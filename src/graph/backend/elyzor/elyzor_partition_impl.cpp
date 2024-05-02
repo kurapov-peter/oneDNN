@@ -139,11 +139,28 @@ graph::status_t elyzor_partition_impl_t::compile(
         COMPILE_ASSERT(aengine->kind() == graph::engine_kind_t::dnnl_cpu,
                 "Graph compiler backend only supports cpu engine");
 
-        // get executor somehow
+        // TODO: maybe cache ctx and gc in a static variable
+        const dnnl_graph_compiler_context ctx {
+                /*num_threads=*/std::thread::hardware_concurrency(),
+                /*allocator=*/nullptr, /*deallocator=*/nullptr};
+        const dnnl_graph_compiler *gc;
+        WRAP_GC_CALL(dnnl_graph_compiler_create(&ctx, &gc),
+                "Failed to create graph compiler object");
+
+        std::stringstream json_stream;
+        graph::graph_t(copied_ops_).serialize(json_stream);
+
+        std::string json = json_stream.str();
+
+        const dnnl_graph_compiler_executable *exe;
+        WRAP_GC_CALL(dnnl_graph_compiler_compile(gc, json.data(), &exe),
+                "Failed to compile partition");
 
         auto pimpl = std::make_shared<elyzor_compiled_partition_impl_t>(
                 *aengine, inputs, outputs,
-                std::vector<graph::inplace_pair_t> {}, /*executor=*/nullptr);
+                // inplace pairs are always empty in the original GC
+                std::vector<graph::inplace_pair_t> {},
+                /*executor=*/exe, /*graph_compiler=*/gc);
         compiled_partition->init(pimpl);
         return res;
     } catch (const std::exception &e) {
@@ -173,20 +190,49 @@ elyzor_compiled_partition_impl_t::elyzor_compiled_partition_impl_t(
         const std::vector<graph::logical_tensor_t> &inputs,
         const std::vector<graph::logical_tensor_t> &outputs,
         const std::vector<graph::inplace_pair_t> &inplace_pairs,
-        const void *executor)
+        const dnnl_graph_compiler_executable *exe,
+        const dnnl_graph_compiler *gc)
     : graph::compiled_partition_impl_t(engine, inputs, outputs, inplace_pairs)
-    , executor_(executor) {}
+    , exe_(exe)
+    , gc_(gc) {}
 
-elyzor_compiled_partition_impl_t::~elyzor_compiled_partition_impl_t() {}
+elyzor_compiled_partition_impl_t::~elyzor_compiled_partition_impl_t() {
+    dnnl_graph_compiler_destroy_executable(gc_, exe_);
+    dnnl_graph_compiler_destroy(gc_);
+}
 
 graph::status_t elyzor_compiled_partition_impl_t::execute(
         const graph::stream_t *astream,
         const std::vector<graph::tensor_t> &inputs,
         const std::vector<graph::tensor_t> &outputs) {
-    std::cout << "Trying to execute using Elyzor..." << std::endl;
-    // prepare args and execute
-    // run(executor_, args)
-    return status::success;
+    try {
+        UNUSED(astream);
+        std::vector<dnnl_graph_compiler_tensor> args;
+        args.reserve(inputs.size() + outputs.size());
+
+        for (auto &in : inputs) {
+            auto lt = in.get_logical_tensor();
+            dnnl_graph_compiler_tensor tmp {lt.id,
+                    static_cast<uint8_t>(lt.ndims), lt.dims,
+                    in.get_data_handle()};
+            args.push_back(tmp);
+        }
+        for (auto &out : outputs) {
+            auto lt = out.get_logical_tensor();
+            dnnl_graph_compiler_tensor tmp {lt.id,
+                    static_cast<uint8_t>(lt.ndims), lt.dims,
+                    out.get_data_handle()};
+            args.push_back(tmp);
+        }
+
+        WRAP_GC_CALL(dnnl_graph_compiler_execute(gc_, exe_, args.data(),
+                             args.data() + inputs.size()),
+                "Failed to execute partition");
+        return status::success;
+    } catch (const std::exception &e) {
+        VERROR(graph, elyzor, "%s", e.what());
+        return graph::status::runtime_error;
+    }
 }
 } // namespace elyzor
 } // namespace graph

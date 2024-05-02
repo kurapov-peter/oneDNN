@@ -14,6 +14,7 @@
  * limitations under the License.
  *******************************************************************************/
 #include "compiler_loader.hpp"
+#include "elyzor_backend.hpp"
 
 namespace dnnl {
 namespace impl {
@@ -33,16 +34,21 @@ void graph_compiler_loader::maybe_load_module() {
     }
 
     try {
-        create_gc_ = load_func<graph_compiler_create_func>(
-                "graph_compiler_create");
-        destroy_gc_ = load_func<graph_compiler_destroy_func>(
-                "graph_compiler_destroy");
-        compile_ = load_func<graph_compiler_compile_func>(
-                "graph_compiler_compile");
-        destroy_exe_ = load_func<graph_compiler_destroy_executable_func>(
-                "graph_compiler_destroy_executable");
-        execute_ = load_func<graph_compiler_execute_func>(
-                "graph_compiler_execute");
+        vtable_.dnnl_graph_compiler_create
+                = load_func<dnnl_graph_compiler_create_t>(
+                        "dnnl_graph_compiler_create");
+        vtable_.dnnl_graph_compiler_destroy
+                = load_func<dnnl_graph_compiler_destroy_t>(
+                        "dnnl_graph_compiler_destroy");
+        vtable_.dnnl_graph_compiler_compile
+                = load_func<dnnl_graph_compiler_compile_t>(
+                        "dnnl_graph_compiler_compile");
+        vtable_.dnnl_graph_compiler_destroy_executable
+                = load_func<dnnl_graph_compiler_destroy_executable_t>(
+                        "dnnl_graph_compiler_destroy_executable");
+        vtable_.dnnl_graph_compiler_execute
+                = load_func<dnnl_graph_compiler_execute_t>(
+                        "dnnl_graph_compiler_execute");
     } catch (const std::runtime_error &e) {
         dlclose(handle_);
         handle_ = nullptr;
@@ -54,3 +60,40 @@ void graph_compiler_loader::maybe_load_module() {
 } // namespace graph
 } // namespace impl
 } // namespace dnnl
+
+#define LOAD_AND_CALL(fn_name, ...) \
+    dnnl::impl::graph::elyzor::elyzor_backend_t::get_singleton() \
+            .get_graph_compiler_loader() \
+            .get_vtable() \
+            .fn_name(__VA_ARGS__);
+
+DNNL_API dnnl_status_t dnnl_graph_compiler_create(
+        const struct dnnl_graph_compiler_context *ctx,
+        const struct dnnl_graph_compiler **gc) {
+    return LOAD_AND_CALL(dnnl_graph_compiler_create, ctx, gc);
+}
+
+DNNL_API void dnnl_graph_compiler_destroy(
+        const struct dnnl_graph_compiler *gc) {
+    return LOAD_AND_CALL(dnnl_graph_compiler_destroy, gc);
+}
+
+DNNL_API dnnl_status_t dnnl_graph_compiler_compile(
+        const struct dnnl_graph_compiler *gc, const char *graph_json,
+        const struct dnnl_graph_compiler_executable **exe) {
+    return LOAD_AND_CALL(dnnl_graph_compiler_compile, gc, graph_json, exe);
+}
+
+DNNL_API void dnnl_graph_compiler_destroy_executable(
+        const struct dnnl_graph_compiler *gc,
+        const struct dnnl_graph_compiler_executable *exe) {
+    LOAD_AND_CALL(dnnl_graph_compiler_destroy_executable, gc, exe);
+}
+
+DNNL_API dnnl_status_t dnnl_graph_compiler_execute(
+        const struct dnnl_graph_compiler *gc,
+        const struct dnnl_graph_compiler_executable *exe,
+        dnnl_graph_compiler_tensor *inputs,
+        dnnl_graph_compiler_tensor *outputs) {
+    return LOAD_AND_CALL(dnnl_graph_compiler_execute, gc, exe, inputs, outputs);
+}

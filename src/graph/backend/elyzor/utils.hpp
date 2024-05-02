@@ -71,7 +71,7 @@ std::vector<op_kind_t> get_supported_op_kinds();
     }
 
 #define WRAP_GC_CALL(call, msg) \
-    COMPILE_ASSERT(call == graph_compiler_status::GRAPH_COMPILER_SUCCESS, msg)
+    COMPILE_ASSERT(call == dnnl_status_t::dnnl_success, msg)
 
 } // namespace utils
 } // namespace elyzor

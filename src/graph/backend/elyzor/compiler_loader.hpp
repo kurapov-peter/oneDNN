@@ -13,37 +13,48 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *******************************************************************************/
-#ifndef GRAPH_COMPILER_LOADER_H
-#define GRAPH_COMPILER_LOADER_H
+#ifndef ELYZOR_GRAPH_COMPILER_LOADER_H
+#define ELYZOR_GRAPH_COMPILER_LOADER_H
 
 #include <dlfcn.h>
 #include <iostream>
 #include "common/verbose.hpp"
-#include "graph_compiler.h"
+#include "include/dnnl_graph_compiler.h"
 
 namespace dnnl {
 namespace impl {
 namespace graph {
 namespace elyzor {
 
-typedef graph_compiler_status (*graph_compiler_create_func)(
-        const struct graph_compiler_context *ctx,
-        const struct graph_compiler **gc);
+typedef dnnl_status_t (*dnnl_graph_compiler_create_t)(
+        const struct dnnl_graph_compiler_context *ctx,
+        const struct dnnl_graph_compiler **gc);
 
-typedef void (*graph_compiler_destroy_func)(const struct graph_compiler *gc);
+typedef void (*dnnl_graph_compiler_destroy_t)(
+        const struct dnnl_graph_compiler *gc);
 
-typedef graph_compiler_status (*graph_compiler_compile_func)(
-        const struct graph_compiler *gc, const char *graph_json,
-        const struct graph_compiler_executable **exe);
+typedef dnnl_status_t (*dnnl_graph_compiler_compile_t)(
+        const struct dnnl_graph_compiler *gc, const char *graph_json,
+        const struct dnnl_graph_compiler_executable **exe);
 
-typedef void (*graph_compiler_destroy_executable_func)(
-        const struct graph_compiler *gc,
-        const struct graph_compiler_executable *exe);
+typedef void (*dnnl_graph_compiler_destroy_executable_t)(
+        const struct dnnl_graph_compiler *gc,
+        const struct dnnl_graph_compiler_executable *exe);
 
-typedef graph_compiler_status (*graph_compiler_execute_func)(
-        const struct graph_compiler *gc,
-        const struct graph_compiler_executable *exe,
-        graph_compiler_tensor *inputs, graph_compiler_tensor *outputs);
+typedef dnnl_status_t (*dnnl_graph_compiler_execute_t)(
+        const struct dnnl_graph_compiler *gc,
+        const struct dnnl_graph_compiler_executable *exe,
+        dnnl_graph_compiler_tensor *inputs,
+        dnnl_graph_compiler_tensor *outputs);
+
+struct dnnl_graph_compiler_vtable {
+    dnnl_graph_compiler_create_t dnnl_graph_compiler_create;
+    dnnl_graph_compiler_destroy_t dnnl_graph_compiler_destroy;
+    dnnl_graph_compiler_compile_t dnnl_graph_compiler_compile;
+    dnnl_graph_compiler_destroy_executable_t
+            dnnl_graph_compiler_destroy_executable;
+    dnnl_graph_compiler_execute_t dnnl_graph_compiler_execute;
+};
 
 class graph_compiler_loader {
 public:
@@ -53,49 +64,8 @@ public:
     graph_compiler_loader &operator=(const graph_compiler_loader &) = delete;
     graph_compiler_loader &operator=(graph_compiler_loader &&) = delete;
 
-    graph_compiler_status create_gc(const struct graph_compiler_context *ctx,
-            const struct graph_compiler **gc) {
-        maybe_load_module();
-        return create_gc_(ctx, gc);
-    }
-
-    void destroy_gc(const struct graph_compiler *gc) {
-        maybe_load_module();
-        destroy_gc_(gc);
-    }
-
-    graph_compiler_status compile(const struct graph_compiler *gc,
-            const char *graph_json,
-            const struct graph_compiler_executable **exe) {
-        maybe_load_module();
-        return compile_(gc, graph_json, exe);
-    }
-
-    void destroy_exe(const struct graph_compiler *gc,
-            const struct graph_compiler_executable *exe) {
-        maybe_load_module();
-        destroy_exe_(gc, exe);
-    }
-
-    graph_compiler_status execute(const struct graph_compiler *gc,
-            const struct graph_compiler_executable *exe,
-            graph_compiler_tensor *inputs, graph_compiler_tensor *outputs) {
-        maybe_load_module();
-        return execute_(gc, exe, inputs, outputs);
-    }
-
-    ~graph_compiler_loader() {
-        if (handle_) dlclose(handle_);
-    }
-
-private:
-    void maybe_load_module();
-
     template <typename func_ptr_type>
     func_ptr_type load_func(const char *func_name) {
-        if (!handle_) {
-            throw std::runtime_error("Can't load symbols from an invalid handle.");
-        }
         func_ptr_type func = (func_ptr_type)dlsym(handle_, func_name);
         if (!func) {
             std::stringstream ss;
@@ -106,14 +76,22 @@ private:
         return func;
     }
 
+    ~graph_compiler_loader() {
+        if (handle_) dlclose(handle_);
+    }
+
+    const dnnl_graph_compiler_vtable &get_vtable() {
+        maybe_load_module();
+        return vtable_;
+    }
+
+private:
+    void maybe_load_module();
+
     std::mutex mtx_;
     void *handle_;
     static const char *libname;
-    graph_compiler_create_func create_gc_;
-    graph_compiler_destroy_func destroy_gc_;
-    graph_compiler_compile_func compile_;
-    graph_compiler_destroy_executable_func destroy_exe_;
-    graph_compiler_execute_func execute_;
+    dnnl_graph_compiler_vtable vtable_;
 };
 
 } // namespace elyzor

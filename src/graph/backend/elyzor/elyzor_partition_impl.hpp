@@ -25,6 +25,7 @@
 #include "graph/interface/partition.hpp"
 
 #include "elyzor_backend.hpp"
+#include "include/dnnl_graph_compiler.h"
 #include "utils.hpp"
 
 namespace dnnl {
@@ -118,7 +119,8 @@ public:
             const std::vector<graph::logical_tensor_t> &inputs,
             const std::vector<graph::logical_tensor_t> &outputs,
             const std::vector<graph::inplace_pair_t> &inplace_pairs,
-            const void *executor);
+            const dnnl_graph_compiler_executable *exe,
+            const dnnl_graph_compiler *gc);
     virtual ~elyzor_compiled_partition_impl_t();
     graph::status_t execute(const graph::stream_t *astream,
             const std::vector<graph::tensor_t> &inputs,
@@ -135,7 +137,8 @@ public:
 #endif
 
 private:
-    const void *executor_;
+    const dnnl_graph_compiler_executable *exe_;
+    const dnnl_graph_compiler *gc_;
 };
 
 } // namespace elyzor
