@@ -23,8 +23,9 @@ namespace elyzor {
 const char *graph_compiler_loader::libname = "libgraph_compiler.so";
 
 void graph_compiler_loader::maybe_load_module() {
+    std::lock_guard<std::mutex> lock(mtx_);
     if (handle_) return;
-    handle_ = dlopen(libname, RTLD_LAZY);
+    handle_ = dlopen(libname, RTLD_LAZY | RTLD_DEEPBIND);
     if (!handle_) {
         std::stringstream ss;
         ss << "Failed to load library: " << dlerror();

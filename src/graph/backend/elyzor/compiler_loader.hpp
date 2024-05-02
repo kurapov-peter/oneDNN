@@ -94,7 +94,7 @@ private:
     template <typename func_ptr_type>
     func_ptr_type load_func(const char *func_name) {
         if (!handle_) {
-            std::runtime_error("Can't load symbols from an invalid handle.");
+            throw std::runtime_error("Can't load symbols from an invalid handle.");
         }
         func_ptr_type func = (func_ptr_type)dlsym(handle_, func_name);
         if (!func) {
@@ -106,6 +106,7 @@ private:
         return func;
     }
 
+    std::mutex mtx_;
     void *handle_;
     static const char *libname;
     graph_compiler_create_func create_gc_;
