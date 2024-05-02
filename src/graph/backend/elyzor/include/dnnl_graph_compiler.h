@@ -18,6 +18,13 @@ extern "C" {
 struct dnnl_graph_compiler;
 struct dnnl_graph_compiler_executable;
 
+// TODO: make a proper version structure, this is a draft for now
+struct dnnl_graph_compiler_version {
+    size_t major;
+    size_t minor;
+    size_t patch;
+};
+
 struct dnnl_graph_compiler_context {
     uint32_t num_threads;
 
@@ -32,6 +39,9 @@ struct dnnl_graph_compiler_tensor {
     dnnl_dim_t *dims;
     void *data;
 };
+
+DNNL_API dnnl_status_t dnnl_graph_compiler_get_version(
+        dnnl_graph_compiler_version *v);
 
 DNNL_API dnnl_status_t dnnl_graph_compiler_create(
         const struct dnnl_graph_compiler_context *ctx,

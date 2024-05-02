@@ -26,6 +26,9 @@ namespace impl {
 namespace graph {
 namespace elyzor {
 
+typedef dnnl_status_t (*dnnl_graph_compiler_get_version_t)(
+        dnnl_graph_compiler_version *v);
+
 typedef dnnl_status_t (*dnnl_graph_compiler_create_t)(
         const struct dnnl_graph_compiler_context *ctx,
         const struct dnnl_graph_compiler **gc);
@@ -48,6 +51,7 @@ typedef dnnl_status_t (*dnnl_graph_compiler_execute_t)(
         dnnl_graph_compiler_tensor *outputs);
 
 struct dnnl_graph_compiler_vtable {
+    dnnl_graph_compiler_get_version_t dnnl_graph_compiler_get_version;
     dnnl_graph_compiler_create_t dnnl_graph_compiler_create;
     dnnl_graph_compiler_destroy_t dnnl_graph_compiler_destroy;
     dnnl_graph_compiler_compile_t dnnl_graph_compiler_compile;
@@ -85,6 +89,12 @@ public:
         return vtable_;
     }
 
+    bool is_version_supported(dnnl_graph_compiler_version version) {
+        return version.major == supported_version_.major
+                && version.minor == supported_version_.minor
+                && version.patch == supported_version_.patch;
+    }
+
 private:
     void maybe_load_module();
 
@@ -92,6 +102,7 @@ private:
     void *handle_;
     static const char *libname;
     dnnl_graph_compiler_vtable vtable_;
+    dnnl_graph_compiler_version supported_version_ {0, 0, 1};
 };
 
 } // namespace elyzor

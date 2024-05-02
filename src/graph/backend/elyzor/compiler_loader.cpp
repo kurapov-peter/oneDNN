@@ -34,6 +34,20 @@ void graph_compiler_loader::maybe_load_module() {
     }
 
     try {
+        // check for the version
+        vtable_.dnnl_graph_compiler_get_version
+                = load_func<dnnl_graph_compiler_get_version_t>(
+                        "dnnl_graph_compiler_get_version");
+
+        dnnl_graph_compiler_version v;
+        vtable_.dnnl_graph_compiler_get_version(&v);
+        if (!is_version_supported(v)) {
+            std::stringstream ss;
+            ss << "Unsupported version of " << libname << " (" << v.major << "."
+               << v.minor << "." << v.patch << ")";
+            throw std::runtime_error(ss.str());
+        }
+
         vtable_.dnnl_graph_compiler_create
                 = load_func<dnnl_graph_compiler_create_t>(
                         "dnnl_graph_compiler_create");
@@ -66,6 +80,11 @@ void graph_compiler_loader::maybe_load_module() {
             .get_graph_compiler_loader() \
             .get_vtable() \
             .fn_name(__VA_ARGS__);
+
+DNNL_API dnnl_status_t dnnl_graph_compiler_get_version(
+        dnnl_graph_compiler_version *v) {
+    return LOAD_AND_CALL(dnnl_graph_compiler_get_version, v);
+}
 
 DNNL_API dnnl_status_t dnnl_graph_compiler_create(
         const struct dnnl_graph_compiler_context *ctx,
