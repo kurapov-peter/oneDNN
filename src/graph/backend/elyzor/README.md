@@ -8,14 +8,6 @@ mkdir build && cd build
 cmake ../ -DONEDNN_EXPERIMENTAL_ELYZOR_BACKEND=ON
 ```
 
-The current implementation of `elyzor/CMakeLists.txt` looks for [graph-compiler](https://github.com/intel/graph-compiler/tree/AndreyPavlenko-dev)
-at the following paths:
-```
-oneDNN/../graph-compiler/include/graph_compiler.h
-oneDNN/../graph-compiler/build/libgraph_compiler.so
-```
-Make sure they're available.
-
 #### How to test:
 There's an example file that uses elyzor backend for compilation/execution ([examples/graph/cpu_elyzor_test.cpp](https://github.com/dchigarev/oneDNN/blob/init_elyzor/examples/graph/cpu_elyzor_test.cpp)).
 
