@@ -45,52 +45,74 @@ typedef graph_compiler_status (*graph_compiler_execute_func)(
         const struct graph_compiler_executable *exe,
         graph_compiler_tensor *inputs, graph_compiler_tensor *outputs);
 
-typedef size_t (*graph_compiler_hints_func)(
-        const struct graph_compiler_executable *exe,
-        const struct graph_compiler_hint **hints);
-
-struct graph_compiler_loader {
-    graph_compiler_create_func create_gc;
-    graph_compiler_destroy_func destroy_gc;
-    graph_compiler_compile_func compile;
-    graph_compiler_destroy_executable_func destroy_exe;
-    graph_compiler_execute_func execute;
-
-    graph_compiler_loader() {
-        handle_ = dlopen("libgraph_compiler.so", RTLD_LAZY);
-        if (!handle_) {
-            std::stringstream ss;
-            ss << "Failed to load library: " << dlerror();
-            throw std::runtime_error(ss.str());
-        }
-
-        create_gc = (graph_compiler_create_func)dlsym(
-                handle_, "graph_compiler_create");
-        destroy_gc = (graph_compiler_destroy_func)dlsym(
-                handle_, "graph_compiler_destroy");
-        compile = (graph_compiler_compile_func)dlsym(
-                handle_, "graph_compiler_compile");
-        destroy_exe = (graph_compiler_destroy_executable_func)dlsym(
-                handle_, "graph_compiler_destroy_executable");
-        execute = (graph_compiler_execute_func)dlsym(
-                handle_, "graph_compiler_execute");
-
-        if (!create_gc || !destroy_gc || !compile || !destroy_exe || !execute) {
-            dlclose(handle_);
-            throw std::runtime_error("Failed to load one or more graph compiler's functions.");
-        }
-    }
+class graph_compiler_loader {
+public:
+    graph_compiler_loader() : handle_(nullptr) {}
     graph_compiler_loader(graph_compiler_loader &) = delete;
     graph_compiler_loader(graph_compiler_loader &&) = delete;
     graph_compiler_loader &operator=(const graph_compiler_loader &) = delete;
     graph_compiler_loader &operator=(graph_compiler_loader &&) = delete;
+
+    graph_compiler_status create_gc(const struct graph_compiler_context *ctx,
+            const struct graph_compiler **gc) {
+        maybe_load_module();
+        return create_gc_(ctx, gc);
+    }
+
+    void destroy_gc(const struct graph_compiler *gc) {
+        maybe_load_module();
+        destroy_gc_(gc);
+    }
+
+    graph_compiler_status compile(const struct graph_compiler *gc,
+            const char *graph_json,
+            const struct graph_compiler_executable **exe) {
+        maybe_load_module();
+        return compile_(gc, graph_json, exe);
+    }
+
+    void destroy_exe(const struct graph_compiler *gc,
+            const struct graph_compiler_executable *exe) {
+        maybe_load_module();
+        destroy_exe_(gc, exe);
+    }
+
+    graph_compiler_status execute(const struct graph_compiler *gc,
+            const struct graph_compiler_executable *exe,
+            graph_compiler_tensor *inputs, graph_compiler_tensor *outputs) {
+        maybe_load_module();
+        return execute_(gc, exe, inputs, outputs);
+    }
 
     ~graph_compiler_loader() {
         if (handle_) dlclose(handle_);
     }
 
 private:
+    void maybe_load_module();
+
+    template <typename func_ptr_type>
+    func_ptr_type load_func(const char *func_name) {
+        if (!handle_) {
+            std::runtime_error("Can't load symbols from an invalid handle.");
+        }
+        func_ptr_type func = (func_ptr_type)dlsym(handle_, func_name);
+        if (!func) {
+            std::stringstream ss;
+            ss << "Failed to load \'" << func_name << "\' function from "
+               << libname;
+            throw std::runtime_error(ss.str());
+        }
+        return func;
+    }
+
     void *handle_;
+    static const char *libname;
+    graph_compiler_create_func create_gc_;
+    graph_compiler_destroy_func destroy_gc_;
+    graph_compiler_compile_func compile_;
+    graph_compiler_destroy_executable_func destroy_exe_;
+    graph_compiler_execute_func execute_;
 };
 
 } // namespace elyzor

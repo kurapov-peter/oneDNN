@@ -110,14 +110,8 @@ status_t compiler_backend_t::get_partitions(
 } // namespace elyzor
 
 void register_elyzor_backend() {
-    try {
-        backend_registry_t::get_singleton().register_backend(
-                &elyzor::compiler_backend_t::get_singleton());
-    } catch (const std::runtime_error& e) {
-        std::stringstream ss;
-        ss << "Failed to initialize Elyzor backend: " << e.what();
-        throw std::runtime_error(ss.str());
-    }
+    backend_registry_t::get_singleton().register_backend(
+            &elyzor::compiler_backend_t::get_singleton());
 }
 
 } // namespace graph

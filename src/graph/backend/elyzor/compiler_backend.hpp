@@ -43,7 +43,7 @@ public:
         return ins;
     }
 
-    const graph_compiler_loader &get_graph_compiler_loader() const {
+    graph_compiler_loader &get_graph_compiler_loader() {
         return gc_module_;
     }
 
@@ -79,7 +79,7 @@ private:
     static graph::pass::pass_registry_t register_passes();
 
     static graph::pass::pass_registry_t pass_registry_;
-    const graph_compiler_loader gc_module_;
+    graph_compiler_loader gc_module_;
 };
 
 } // namespace elyzor
