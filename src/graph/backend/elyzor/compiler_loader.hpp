@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright 2021-2023 Intel Corporation
+ * Copyright 2021-2024 Intel Corporation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -70,7 +70,12 @@ public:
 
     template <typename func_ptr_type>
     func_ptr_type load_func(const char *func_name) {
-        func_ptr_type func = (func_ptr_type)dlsym(handle_, func_name);
+        if (!handle_) {
+            throw std::runtime_error(
+                    "Can't load symbols from an invalid handle.");
+        }
+        func_ptr_type func
+                = reinterpret_cast<func_ptr_type>(dlsym(handle_, func_name));
         if (!func) {
             std::stringstream ss;
             ss << "Failed to load \'" << func_name << "\' function from "
@@ -102,7 +107,7 @@ private:
     void *handle_;
     static const char *libname;
     dnnl_graph_compiler_vtable vtable_;
-    dnnl_graph_compiler_version supported_version_ {0, 0, 1};
+    static const dnnl_graph_compiler_version supported_version_;
 };
 
 } // namespace elyzor

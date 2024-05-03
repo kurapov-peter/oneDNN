@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright 2021-2023 Intel Corporation
+ * Copyright 2021-2024 Intel Corporation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,6 +22,8 @@ namespace graph {
 namespace elyzor {
 
 const char *graph_compiler_loader::libname = "libgraph_compiler.so";
+const dnnl_graph_compiler_version graph_compiler_loader::supported_version_ {
+        .major = 0, .minor = 0, .patch = 1};
 
 void graph_compiler_loader::maybe_load_module() {
     std::lock_guard<std::mutex> lock(mtx_);
@@ -81,35 +83,35 @@ void graph_compiler_loader::maybe_load_module() {
             .get_vtable() \
             .fn_name(__VA_ARGS__);
 
-DNNL_API dnnl_status_t dnnl_graph_compiler_get_version(
+dnnl_status_t dnnl_graph_compiler_get_version(
         dnnl_graph_compiler_version *v) {
     return LOAD_AND_CALL(dnnl_graph_compiler_get_version, v);
 }
 
-DNNL_API dnnl_status_t dnnl_graph_compiler_create(
+dnnl_status_t dnnl_graph_compiler_create(
         const struct dnnl_graph_compiler_context *ctx,
         const struct dnnl_graph_compiler **gc) {
     return LOAD_AND_CALL(dnnl_graph_compiler_create, ctx, gc);
 }
 
-DNNL_API void dnnl_graph_compiler_destroy(
+void dnnl_graph_compiler_destroy(
         const struct dnnl_graph_compiler *gc) {
     return LOAD_AND_CALL(dnnl_graph_compiler_destroy, gc);
 }
 
-DNNL_API dnnl_status_t dnnl_graph_compiler_compile(
+dnnl_status_t dnnl_graph_compiler_compile(
         const struct dnnl_graph_compiler *gc, const char *graph_json,
         const struct dnnl_graph_compiler_executable **exe) {
     return LOAD_AND_CALL(dnnl_graph_compiler_compile, gc, graph_json, exe);
 }
 
-DNNL_API void dnnl_graph_compiler_destroy_executable(
+void dnnl_graph_compiler_destroy_executable(
         const struct dnnl_graph_compiler *gc,
         const struct dnnl_graph_compiler_executable *exe) {
     LOAD_AND_CALL(dnnl_graph_compiler_destroy_executable, gc, exe);
 }
 
-DNNL_API dnnl_status_t dnnl_graph_compiler_execute(
+dnnl_status_t dnnl_graph_compiler_execute(
         const struct dnnl_graph_compiler *gc,
         const struct dnnl_graph_compiler_executable *exe,
         dnnl_graph_compiler_tensor *inputs,
