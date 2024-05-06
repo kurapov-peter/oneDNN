@@ -213,14 +213,20 @@ graph::status_t elyzor_compiled_partition_impl_t::execute(
         for (auto &in : inputs) {
             auto lt = in.get_logical_tensor();
             dnnl_graph_compiler_tensor tmp {lt.id,
-                    static_cast<uint8_t>(lt.ndims), lt.dims,
+                    static_cast<uint8_t>(lt.ndims),
+                    // 'dnnl_dim_t' is an alias for 'int64_t' so this cast does nothing,
+                    // just put it here as a safeguard if 'dnnl_dim_t' would change one day
+                    static_cast<int64_t*>(lt.dims),
                     in.get_data_handle()};
             args.push_back(tmp);
         }
         for (auto &out : outputs) {
             auto lt = out.get_logical_tensor();
             dnnl_graph_compiler_tensor tmp {lt.id,
-                    static_cast<uint8_t>(lt.ndims), lt.dims,
+                    static_cast<uint8_t>(lt.ndims),
+                    // 'dnnl_dim_t' is an alias for 'int64_t' so this cast does nothing,
+                    // just put it here as a safeguard if 'dnnl_dim_t' would change one day
+                    static_cast<int64_t*>(lt.dims),
                     out.get_data_handle()};
             args.push_back(tmp);
         }
