@@ -15,6 +15,7 @@
  *******************************************************************************/
 #include "compiler_loader.hpp"
 #include "elyzor_backend.hpp"
+#include "include/dnnl_graph_compiler_version.h"
 
 namespace dnnl {
 namespace impl {
@@ -22,8 +23,13 @@ namespace graph {
 namespace elyzor {
 
 const char *graph_compiler_loader::libname = "libgraph_compiler.so";
-const dnnl_graph_compiler_version graph_compiler_loader::supported_version_ {
-        .major = 0, .minor = 0, .patch = 1};
+const dnnl_graph_compiler_api_version
+        graph_compiler_loader::supported_version_ {
+                .major = GC_API_VERSION_MAJOR,
+                .minor = GC_API_VERSION_MINOR,
+                .patch = GC_API_VERSION_PATCH,
+                // hash is ignored when comparing with another version
+                .hash = GC_API_VERSION_HASH};
 
 void graph_compiler_loader::maybe_load_module() {
     std::lock_guard<std::mutex> lock(mtx_);
@@ -37,16 +43,17 @@ void graph_compiler_loader::maybe_load_module() {
 
     try {
         // check for the version
-        vtable_.dnnl_graph_compiler_get_version
-                = load_func<dnnl_graph_compiler_get_version_t>(
-                        "dnnl_graph_compiler_get_version");
+        vtable_.dnnl_graph_compiler_get_api_version
+                = load_func<dnnl_graph_compiler_get_api_version_t>(
+                        "dnnl_graph_compiler_get_api_version");
 
-        dnnl_graph_compiler_version v;
-        vtable_.dnnl_graph_compiler_get_version(&v);
+        dnnl_graph_compiler_api_version v;
+        WRAP_GC_CALL(vtable_.dnnl_graph_compiler_get_api_version(&v),
+                "Failed to retrieve graph compiler's API version");
         if (!is_version_supported(v)) {
             std::stringstream ss;
             ss << "Unsupported version of " << libname << " (" << v.major << "."
-               << v.minor << "." << v.patch << ")";
+               << v.minor << "." << v.patch << " " << v.hash << ")";
             throw std::runtime_error(ss.str());
         }
 
@@ -83,9 +90,9 @@ void graph_compiler_loader::maybe_load_module() {
             .get_vtable() \
             .fn_name(__VA_ARGS__);
 
-DNNL_API dnnl_status_t dnnl_graph_compiler_get_version(
-        dnnl_graph_compiler_version *v) {
-    return LOAD_AND_CALL(dnnl_graph_compiler_get_version, v);
+DNNL_API dnnl_status_t dnnl_graph_compiler_get_api_version(
+        dnnl_graph_compiler_api_version *v) {
+    return LOAD_AND_CALL(dnnl_graph_compiler_get_api_version, v);
 }
 
 DNNL_API dnnl_status_t dnnl_graph_compiler_create(

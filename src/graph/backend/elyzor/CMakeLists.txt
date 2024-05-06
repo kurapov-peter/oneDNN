@@ -21,6 +21,20 @@ endif()
 
 message(STATUS "Elyzor backend is enabled.")
 
+set(GC_API_VERSION_MAJOR "0")
+set(GC_API_VERSION_MINOR "1")
+set(GC_API_VERSION_PATCH "0")
+if (NOT DEFINED DNNL_VERSION_HASH)
+    # this usually shouldn't happen as this variable is defined by
+    # higher level cmakes
+    set(DNNL_VERSION_HASH "N/A")
+endif ()
+
+configure_file(
+    "${CMAKE_CURRENT_SOURCE_DIR}/include/dnnl_graph_compiler_version.h.in"
+    "${CMAKE_CURRENT_SOURCE_DIR}/include/dnnl_graph_compiler_version.h"
+)
+
 if(${CMAKE_CXX_COMPILER_ID} STREQUAL MSVC)
     set(CCXX_NOWARN_FLAGS "")
     append(CCXX_NOWARN_FLAGS "/wd4200")
