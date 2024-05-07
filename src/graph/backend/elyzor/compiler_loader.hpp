@@ -58,7 +58,17 @@ struct dnnl_graph_compiler_vtable {
 
 class graph_compiler_loader {
 public:
-    graph_compiler_loader() : handle_(nullptr) {}
+    static const dnnl_graph_compiler_vtable &get_vtable() {
+        static graph_compiler_loader ins;
+        return ins.vtable_;
+    }
+
+    ~graph_compiler_loader() {
+        if (handle_) dlclose(handle_);
+    }
+
+private:
+    graph_compiler_loader();
     graph_compiler_loader(graph_compiler_loader &) = delete;
     graph_compiler_loader(graph_compiler_loader &&) = delete;
     graph_compiler_loader &operator=(const graph_compiler_loader &) = delete;
@@ -81,19 +91,6 @@ public:
         return func;
     }
 
-    ~graph_compiler_loader() {
-        if (handle_) dlclose(handle_);
-    }
-
-    const dnnl_graph_compiler_vtable &get_vtable() {
-        maybe_load_module();
-        return vtable_;
-    }
-
-private:
-    void maybe_load_module();
-
-    std::mutex mtx_;
     void *handle_;
     static const char *libname;
     dnnl_graph_compiler_vtable vtable_;

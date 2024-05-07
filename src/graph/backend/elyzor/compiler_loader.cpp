@@ -23,9 +23,7 @@ namespace elyzor {
 
 const char *graph_compiler_loader::libname = "libgraph_compiler.so";
 
-void graph_compiler_loader::maybe_load_module() {
-    std::lock_guard<std::mutex> lock(mtx_);
-    if (handle_) return;
+graph_compiler_loader::graph_compiler_loader() {
     handle_ = dlopen(libname, RTLD_LAZY | RTLD_DEEPBIND);
     if (!handle_) {
         std::stringstream ss;
@@ -49,10 +47,9 @@ void graph_compiler_loader::maybe_load_module() {
         vtable_.dnnl_graph_compiler_execute
                 = load_func<dnnl_graph_compiler_execute_t>(
                         "dnnl_graph_compiler_execute");
-    } catch (const std::runtime_error &e) {
+    } catch (...) {
         dlclose(handle_);
-        handle_ = nullptr;
-        throw e;
+        throw;
     }
 }
 
@@ -62,10 +59,8 @@ void graph_compiler_loader::maybe_load_module() {
 } // namespace dnnl
 
 #define LOAD_AND_CALL(fn_name, ...) \
-    dnnl::impl::graph::elyzor::elyzor_backend_t::get_singleton() \
-            .get_graph_compiler_loader() \
-            .get_vtable() \
-            .fn_name(__VA_ARGS__);
+    dnnl::impl::graph::elyzor::graph_compiler_loader::get_vtable().fn_name( \
+            __VA_ARGS__);
 
 DNNL_API dnnl_status_t dnnl_graph_compiler_create(
         const struct dnnl_graph_compiler_context *ctx,
