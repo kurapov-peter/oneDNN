@@ -1,5 +1,7 @@
 #ifndef DNNL_GRAPH_COMPILER_H
 #define DNNL_GRAPH_COMPILER_H
+#define DNNL_DLL
+#define DNNL_DLL_EXPORTS
 
 #include <cstddef>
 #include <cstdint>
@@ -34,10 +36,19 @@ struct dnnl_graph_compiler_version {
         size_t patch;
         const char *hash;
     };
-    // version of the gc API that was used to compile gc
+    // version of the gc API that was used to compile gc,
+    // we only bump it if the API in this file changes
     version api_version;
-    // version of the graph compiler itself
+    // version of the graph compiler itself, we only bump it if
+    // the core graph compiler releases a new version (with new
+    // compiling features, etc) that does not necessarily change
+    // the API in this file
     version gc_version;
+    // Why having two versions?
+    // The versions are bumped independently, so we want to know both versions of the '.so':
+    //     1. API version - to check whether it's compatible at all with the current oneDNN version.
+    //     2. GC version - to know which features/compilation patterns are supported in order to
+    //        dispatch backend's logic based on this information (register certain patterns or not)
 };
 
 struct dnnl_graph_compiler_context {
