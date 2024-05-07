@@ -31,9 +31,9 @@ struct dnnl_graph_compiler_executable;
 
 struct dnnl_graph_compiler_version {
     struct version {
-        size_t major;
-        size_t minor;
-        size_t patch;
+        uint8_t major;
+        uint8_t minor;
+        uint8_t patch;
         const char *hash;
     };
     // version of the gc API that was used to compile gc,
