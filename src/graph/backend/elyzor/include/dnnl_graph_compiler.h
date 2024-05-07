@@ -1,11 +1,10 @@
 #ifndef DNNL_GRAPH_COMPILER_H
 #define DNNL_GRAPH_COMPILER_H
-#define DNNL_DLL
-#define DNNL_DLL_EXPORTS
 
 #include <cstddef>
 #include <cstdint>
 #include "dnnl_types.h"
+#include "dnnl_version.h"
 
 /*
  * Public API for integration with third-party graph compilers.
@@ -15,8 +14,31 @@
 extern "C" {
 #endif
 
+// graph compiler's API version following semver
+#define DNNL_GC_API_V_MAJOR 0
+#define DNNL_GC_API_V_MINOR 1
+#define DNNL_GC_API_V_PATCH 0
+#ifdef DNNL_VERSION_HASH
+#define DNNL_GC_API_V_HASH DNNL_VERSION_HASH
+#else
+#define DNNL_GC_API_V_HASH "N/A"
+#endif
+
 struct dnnl_graph_compiler;
 struct dnnl_graph_compiler_executable;
+
+struct dnnl_graph_compiler_version {
+    struct version {
+        size_t major;
+        size_t minor;
+        size_t patch;
+        const char *hash;
+    };
+    // version of the gc API that was used to compile gc
+    version api_version;
+    // version of the graph compiler itself
+    version gc_version;
+};
 
 struct dnnl_graph_compiler_context {
     uint32_t num_threads;
@@ -32,6 +54,9 @@ struct dnnl_graph_compiler_tensor {
     size_t *dims;
     void *data;
 };
+
+DNNL_API const dnnl_graph_compiler_version *dnnl_graph_compiler_get_version(
+        void);
 
 DNNL_API dnnl_status_t dnnl_graph_compiler_create(
         const struct dnnl_graph_compiler_context *ctx,
