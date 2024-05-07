@@ -18,13 +18,6 @@ extern "C" {
 struct dnnl_graph_compiler;
 struct dnnl_graph_compiler_executable;
 
-struct dnnl_graph_compiler_api_version {
-    size_t major;
-    size_t minor;
-    size_t patch;
-    const char *hash;
-};
-
 struct dnnl_graph_compiler_context {
     uint32_t num_threads;
 
@@ -39,9 +32,6 @@ struct dnnl_graph_compiler_tensor {
     int64_t *dims;
     void *data;
 };
-
-DNNL_API dnnl_status_t dnnl_graph_compiler_get_api_version(
-        dnnl_graph_compiler_api_version *v);
 
 DNNL_API dnnl_status_t dnnl_graph_compiler_create(
         const struct dnnl_graph_compiler_context *ctx,
