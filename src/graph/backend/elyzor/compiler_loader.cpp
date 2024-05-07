@@ -16,41 +16,81 @@
 #include "compiler_loader.hpp"
 #include "elyzor_backend.hpp"
 
+#ifdef _WIN32
+#include <windows.h>
+#define DNNL_GC_LIB_NAME "graph_compiler.dll"
+#define OPEN_LIB(libname, flags) LoadLibrary(libname)
+#define LOAD_FUNC(handle, funcname) GetProcAddress((HMODULE)handle, funcname)
+#define FREE_LIB(handle) FreeLibrary((HMODULE)handle)
+#define OPEN_LIB_REPORT_ERROR() ("could not find " #DNNL_GC_LIB_NAME)
+#else
+#define OPEN_LIB(libname, flags) dlopen(libname, flags)
+#define LOAD_FUNC(handle, funcname) dlsym(handle, funcname)
+#define FREE_LIB(handle) dlclose(handle)
+#define OPEN_LIB_REPORT_ERROR() dlerror()
+#endif
+#ifdef __APPLE__
+#include <dlfcn.h>
+#define DNNL_GC_LIB_NAME "libgraph_compiler.dylib"
+#elif !defined(_WIN32)
+#include <dlfcn.h>
+#define DNNL_GC_LIB_NAME "libgraph_compiler.so"
+#endif
+
 namespace dnnl {
 namespace impl {
 namespace graph {
 namespace elyzor {
 
-const char *graph_compiler_loader::libname = "libgraph_compiler.so";
+template <typename func_ptr_type>
+func_ptr_type load_func(void *handle, const char *func_name) {
+    if (!handle) {
+        throw std::runtime_error("Can't load symbols from an invalid handle.");
+    }
+    func_ptr_type func
+            = reinterpret_cast<func_ptr_type>(LOAD_FUNC(handle, func_name));
+    if (!func) {
+        std::stringstream ss;
+        ss << "Failed to load \'" << func_name << "\' function.";
+        throw std::runtime_error(ss.str());
+    }
+    return func;
+}
+
+const char *graph_compiler_loader::libname_ = DNNL_GC_LIB_NAME;
 
 graph_compiler_loader::graph_compiler_loader() {
-    handle_ = dlopen(libname, RTLD_LAZY | RTLD_DEEPBIND);
+    handle_ = OPEN_LIB(libname_, RTLD_LAZY | RTLD_DEEPBIND);
     if (!handle_) {
         std::stringstream ss;
-        ss << "Failed to load library: " << dlerror();
+        ss << "Failed to load library: " << OPEN_LIB_REPORT_ERROR();
         throw std::runtime_error(ss.str());
     }
 
     try {
         vtable_.dnnl_graph_compiler_create
                 = load_func<dnnl_graph_compiler_create_t>(
-                        "dnnl_graph_compiler_create");
+                        handle_, "dnnl_graph_compiler_create");
         vtable_.dnnl_graph_compiler_destroy
                 = load_func<dnnl_graph_compiler_destroy_t>(
-                        "dnnl_graph_compiler_destroy");
+                        handle_, "dnnl_graph_compiler_destroy");
         vtable_.dnnl_graph_compiler_compile
                 = load_func<dnnl_graph_compiler_compile_t>(
-                        "dnnl_graph_compiler_compile");
+                        handle_, "dnnl_graph_compiler_compile");
         vtable_.dnnl_graph_compiler_destroy_executable
                 = load_func<dnnl_graph_compiler_destroy_executable_t>(
-                        "dnnl_graph_compiler_destroy_executable");
+                        handle_, "dnnl_graph_compiler_destroy_executable");
         vtable_.dnnl_graph_compiler_execute
                 = load_func<dnnl_graph_compiler_execute_t>(
-                        "dnnl_graph_compiler_execute");
+                        handle_, "dnnl_graph_compiler_execute");
     } catch (...) {
-        dlclose(handle_);
+        FREE_LIB(handle_);
         throw;
     }
+}
+
+graph_compiler_loader::~graph_compiler_loader() {
+    if (handle_) FREE_LIB(handle_);
 }
 
 } // namespace elyzor

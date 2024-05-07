@@ -16,7 +16,6 @@
 #ifndef ELYZOR_GRAPH_COMPILER_LOADER_H
 #define ELYZOR_GRAPH_COMPILER_LOADER_H
 
-#include <dlfcn.h>
 #include <iostream>
 #include "common/verbose.hpp"
 #include "include/dnnl_graph_compiler.h"
@@ -62,10 +61,7 @@ public:
         static graph_compiler_loader ins;
         return ins.vtable_;
     }
-
-    ~graph_compiler_loader() {
-        if (handle_) dlclose(handle_);
-    }
+    ~graph_compiler_loader();
 
 private:
     graph_compiler_loader();
@@ -74,25 +70,8 @@ private:
     graph_compiler_loader &operator=(const graph_compiler_loader &) = delete;
     graph_compiler_loader &operator=(graph_compiler_loader &&) = delete;
 
-    template <typename func_ptr_type>
-    func_ptr_type load_func(const char *func_name) {
-        if (!handle_) {
-            throw std::runtime_error(
-                    "Can't load symbols from an invalid handle.");
-        }
-        func_ptr_type func
-                = reinterpret_cast<func_ptr_type>(dlsym(handle_, func_name));
-        if (!func) {
-            std::stringstream ss;
-            ss << "Failed to load \'" << func_name << "\' function from "
-               << libname;
-            throw std::runtime_error(ss.str());
-        }
-        return func;
-    }
-
     void *handle_;
-    static const char *libname;
+    static const char *libname_;
     dnnl_graph_compiler_vtable vtable_;
 };
 
