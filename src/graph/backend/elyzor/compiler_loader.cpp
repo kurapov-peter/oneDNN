@@ -16,27 +16,19 @@
 #include "compiler_loader.hpp"
 #include "elyzor_backend.hpp"
 
-#ifdef __APPLE__
-#include <dlfcn.h>
-#define DNNL_GC_LIB_NAME "libgraph_compiler.dylib"
-#elif !defined(_WIN32)
-#include <dlfcn.h>
-#define DNNL_GC_LIB_NAME "libgraph_compiler.so"
-#endif
-
 #ifdef _WIN32
 #include <windows.h>
 #define DNNL_GC_LIB_NAME "graph_compiler.dll"
-#define OPEN_GC_LIB() LoadLibrary(DNNL_GC_LIB_NAME)
-#define LOAD_FUNC(handle, funcname) GetProcAddress((HMODULE)handle, funcname)
-#define FREE_LIB(handle) FreeLibrary((HMODULE)handle)
-#define GET_LAST_LIB_ERROR() \
-    ("an error occured when working with " #DNNL_GC_LIB_NAME)
+#define dlopen(libname, flags) LoadLibrary(libname)
+#define dlsym(handle, funcname) GetProcAddress((HMODULE)handle, funcname)
+#define dlclose(handle) FreeLibrary((HMODULE)handle)
+#define dlerror() "an error occured when working with " #DNNL_GC_LIB_NAME
+#elif __APPLE__
+#include <dlfcn.h>
+#define DNNL_GC_LIB_NAME "libgraph_compiler.dylib"
 #else
-#define OPEN_GC_LIB() dlopen(DNNL_GC_LIB_NAME, RTLD_LAZY | RTLD_DEEPBIND)
-#define LOAD_FUNC(handle, funcname) dlsym(handle, funcname)
-#define FREE_LIB(handle) dlclose(handle)
-#define GET_LAST_LIB_ERROR() dlerror()
+#include <dlfcn.h>
+#define DNNL_GC_LIB_NAME "libgraph_compiler.so"
 #endif
 
 namespace dnnl {
@@ -50,7 +42,7 @@ func_ptr_type load_func(void *handle, const char *func_name) {
         throw std::runtime_error("Can't load symbols from an invalid handle.");
     }
     func_ptr_type func
-            = reinterpret_cast<func_ptr_type>(LOAD_FUNC(handle, func_name));
+            = reinterpret_cast<func_ptr_type>(dlsym(handle, func_name));
     if (!func) {
         std::stringstream ss;
         ss << "Failed to load \'" << func_name << "\' function.";
@@ -60,10 +52,10 @@ func_ptr_type load_func(void *handle, const char *func_name) {
 }
 
 graph_compiler_loader::graph_compiler_loader() {
-    handle_ = OPEN_GC_LIB();
+    handle_ = dlopen(DNNL_GC_LIB_NAME, RTLD_LAZY | RTLD_DEEPBIND);
     if (!handle_) {
         std::stringstream ss;
-        ss << "Failed to load library: " << GET_LAST_LIB_ERROR();
+        ss << "Failed to load library: " << dlerror();
         throw std::runtime_error(ss.str());
     }
 
@@ -84,13 +76,13 @@ graph_compiler_loader::graph_compiler_loader() {
                 = load_func<dnnl_graph_compiler_execute_t>(
                         handle_, "dnnl_graph_compiler_execute");
     } catch (...) {
-        FREE_LIB(handle_);
+        dlclose(handle_);
         throw;
     }
 }
 
 graph_compiler_loader::~graph_compiler_loader() {
-    if (handle_) FREE_LIB(handle_);
+    if (handle_) dlclose(handle_);
 }
 
 } // namespace elyzor
