@@ -71,7 +71,6 @@ private:
     graph_compiler_loader &operator=(graph_compiler_loader &&) = delete;
 
     void *handle_;
-    static const char *libname_;
     dnnl_graph_compiler_vtable vtable_;
 };
 

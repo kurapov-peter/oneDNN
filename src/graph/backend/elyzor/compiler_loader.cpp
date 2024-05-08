@@ -16,25 +16,27 @@
 #include "compiler_loader.hpp"
 #include "elyzor_backend.hpp"
 
-#ifdef _WIN32
-#include <windows.h>
-#define DNNL_GC_LIB_NAME "graph_compiler.dll"
-#define OPEN_LIB(libname, flags) LoadLibrary(libname)
-#define LOAD_FUNC(handle, funcname) GetProcAddress((HMODULE)handle, funcname)
-#define FREE_LIB(handle) FreeLibrary((HMODULE)handle)
-#define OPEN_LIB_REPORT_ERROR() ("could not find " #DNNL_GC_LIB_NAME)
-#else
-#define OPEN_LIB(libname, flags) dlopen(libname, flags)
-#define LOAD_FUNC(handle, funcname) dlsym(handle, funcname)
-#define FREE_LIB(handle) dlclose(handle)
-#define OPEN_LIB_REPORT_ERROR() dlerror()
-#endif
 #ifdef __APPLE__
 #include <dlfcn.h>
 #define DNNL_GC_LIB_NAME "libgraph_compiler.dylib"
 #elif !defined(_WIN32)
 #include <dlfcn.h>
 #define DNNL_GC_LIB_NAME "libgraph_compiler.so"
+#endif
+
+#ifdef _WIN32
+#include <windows.h>
+#define DNNL_GC_LIB_NAME "graph_compiler.dll"
+#define OPEN_GC_LIB() LoadLibrary(DNNL_GC_LIB_NAME)
+#define LOAD_FUNC(handle, funcname) GetProcAddress((HMODULE)handle, funcname)
+#define FREE_LIB(handle) FreeLibrary((HMODULE)handle)
+#define GET_LAST_LIB_ERROR() \
+    ("an error occured when working with " #DNNL_GC_LIB_NAME)
+#else
+#define OPEN_GC_LIB() dlopen(DNNL_GC_LIB_NAME, RTLD_LAZY | RTLD_DEEPBIND)
+#define LOAD_FUNC(handle, funcname) dlsym(handle, funcname)
+#define FREE_LIB(handle) dlclose(handle)
+#define GET_LAST_LIB_ERROR() dlerror()
 #endif
 
 namespace dnnl {
@@ -57,13 +59,11 @@ func_ptr_type load_func(void *handle, const char *func_name) {
     return func;
 }
 
-const char *graph_compiler_loader::libname_ = DNNL_GC_LIB_NAME;
-
 graph_compiler_loader::graph_compiler_loader() {
-    handle_ = OPEN_LIB(libname_, RTLD_LAZY | RTLD_DEEPBIND);
+    handle_ = OPEN_GC_LIB();
     if (!handle_) {
         std::stringstream ss;
-        ss << "Failed to load library: " << OPEN_LIB_REPORT_ERROR();
+        ss << "Failed to load library: " << GET_LAST_LIB_ERROR();
         throw std::runtime_error(ss.str());
     }
 
