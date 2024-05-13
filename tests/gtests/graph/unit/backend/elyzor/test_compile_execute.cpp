@@ -14,12 +14,16 @@
 * limitations under the License.
 *******************************************************************************/
 #include "backend/elyzor/elyzor_backend.hpp"
+#include "backend/elyzor/elyzor_partition_impl.hpp"
 #include "interface/allocator.hpp"
 #include "interface/graph.hpp"
 #include "interface/partition.hpp"
 #include "test_utils.hpp"
 
 #include <gtest/gtest.h>
+
+// the tests below use getters that are only defined under '!NDEBUG'
+#ifndef NDEBUG
 
 // Verify that after calling 'elyzor_partition_impl_t::infer_shape' the input shapes
 // are propagated to the 'copied_ops_' field (the one that is used to dump the graph to JSON)
@@ -73,9 +77,9 @@ TEST(ElyzorGraphTest, CompleteInputShapes) {
 
         part->infer_shape(inputs, outputs);
         // getting the field containing a graph to be converted to JSON
-        auto ops = test_elyzor_partition_impl_t::get_copied_ops(
-                std::static_pointer_cast<impl::elyzor::elyzor_partition_impl_t>(
-                        part));
+        auto ops = std::static_pointer_cast<
+                impl::elyzor::elyzor_partition_impl_t>(part)
+                           ->get_copied_ops();
         // iterating over the graph and verifying that all the shapes are complete
         for (auto &op : ops) {
             for (auto &in_val : op->get_input_values()) {
@@ -99,3 +103,5 @@ TEST(ElyzorGraphTest, CompleteInputShapes) {
         }
     }
 }
+
+#endif

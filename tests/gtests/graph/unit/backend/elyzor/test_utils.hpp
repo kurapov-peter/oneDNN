@@ -16,7 +16,6 @@
 #ifndef BACKEND_ELYZOR_TEST_UTILS_HPP
 #define BACKEND_ELYZOR_TEST_UTILS_HPP
 
-#include "backend/elyzor/elyzor_partition_impl.hpp"
 #include "interface/graph.hpp"
 
 #include "graph/unit/unit_test_common.hpp"
@@ -32,14 +31,6 @@ using ltsr_vec = std::vector<impl::logical_tensor_t>;
     name.set_attr(graph::op_attr::zps, std::vector<int64_t>({2})); \
     name.set_attr(graph::op_attr::qtype, std::string("per_tensor")); \
     name.set_attr(graph::op_attr::axis, (int64_t)0);
-
-class test_elyzor_partition_impl_t {
-public:
-    static std::vector<std::shared_ptr<impl::op_t>> get_copied_ops(
-            std::shared_ptr<impl::elyzor::elyzor_partition_impl_t> part) {
-        return part->copied_ops_;
-    }
-};
 
 inline void construct_mul_quantize_subgraph(graph::graph_t *agraph,
         utils::id_generator &id_gen, const graph::dims &input_shape,

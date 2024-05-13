@@ -27,8 +27,6 @@
 #include "elyzor_backend.hpp"
 #include "utils.hpp"
 
-class test_elyzor_partition_impl_t;
-
 namespace dnnl {
 namespace impl {
 namespace graph {
@@ -36,7 +34,6 @@ namespace elyzor {
 
 class elyzor_partition_impl_t : public partition_impl_t {
     friend class elyzor_backend_t;
-    friend class ::test_elyzor_partition_impl_t;
 
 public:
     elyzor_partition_impl_t(graph::engine_kind_t engine_kind,
@@ -107,6 +104,13 @@ public:
     }
 
     std::string get_name() const { return pname_; }
+
+#ifndef NDEBUG
+    // get protected 'copied_ops_' field, should only be used in testing
+    std::vector<std::shared_ptr<graph::op_t>> get_copied_ops() {
+        return copied_ops_;
+    }
+#endif
 
 protected:
     bool is_init_ = false;
