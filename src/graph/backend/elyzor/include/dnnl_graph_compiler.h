@@ -1,7 +1,5 @@
 #ifndef DNNL_GRAPH_COMPILER_H
 #define DNNL_GRAPH_COMPILER_H
-#define DNNL_DLL
-#define DNNL_DLL_EXPORTS
 
 #include <cstddef>
 #include <cstdint>
@@ -66,25 +64,23 @@ struct dnnl_graph_compiler_tensor {
     void *data;
 };
 
-DNNL_API const dnnl_graph_compiler_version *dnnl_graph_compiler_get_version(
-        void);
+const dnnl_graph_compiler_version *dnnl_graph_compiler_get_version(void);
 
-DNNL_API dnnl_status_t dnnl_graph_compiler_create(
+dnnl_status_t dnnl_graph_compiler_create(
         const struct dnnl_graph_compiler_context *ctx,
         const struct dnnl_graph_compiler **gc);
 
-DNNL_API void dnnl_graph_compiler_destroy(const struct dnnl_graph_compiler *gc);
+void dnnl_graph_compiler_destroy(const struct dnnl_graph_compiler *gc);
 
-DNNL_API dnnl_status_t dnnl_graph_compiler_compile(
-        const struct dnnl_graph_compiler *gc, const char *graph_json,
+dnnl_status_t dnnl_graph_compiler_compile(const struct dnnl_graph_compiler *gc,
+        const char *graph_json,
         const struct dnnl_graph_compiler_executable **exe);
 
-DNNL_API void dnnl_graph_compiler_destroy_executable(
+void dnnl_graph_compiler_destroy_executable(
         const struct dnnl_graph_compiler *gc,
         const struct dnnl_graph_compiler_executable *exe);
 
-DNNL_API dnnl_status_t dnnl_graph_compiler_execute(
-        const struct dnnl_graph_compiler *gc,
+dnnl_status_t dnnl_graph_compiler_execute(const struct dnnl_graph_compiler *gc,
         const struct dnnl_graph_compiler_executable *exe,
         dnnl_graph_compiler_tensor *inputs,
         dnnl_graph_compiler_tensor *outputs);
