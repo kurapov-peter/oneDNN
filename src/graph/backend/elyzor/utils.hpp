@@ -22,6 +22,7 @@
 #include <vector>
 #include <unordered_map>
 
+#include "include/dnnl_graph_compiler.h"
 #include <graph/interface/c_types_map.hpp>
 
 namespace dnnl {
@@ -59,6 +60,8 @@ inline dims get_dense_strides(const dims &shape) {
     return strides;
 }
 
+std::string gc_version_to_string(const dnnl_graph_compiler_version &v);
+std::string gc_version_to_string(const dnnl_graph_compiler_version::version &v);
 const std::unordered_map<op_kind_t, std::string, enum_hash_t> &
 get_supported_ops();
 std::vector<op_kind_t> get_supported_op_kinds();
