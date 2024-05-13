@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright 2021-2023 Intel Corporation
+ * Copyright 2021-2024 Intel Corporation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -69,6 +69,9 @@ std::vector<op_kind_t> get_supported_op_kinds();
         ss << __FILE__ << "[" << __LINE__ << "]: " << __VA_ARGS__ << "\n"; \
         throw ::std::runtime_error(ss.str()); \
     }
+
+#define WRAP_GC_CALL(call, msg) \
+    COMPILE_ASSERT(call == dnnl_status_t::dnnl_success, msg)
 
 } // namespace utils
 } // namespace elyzor

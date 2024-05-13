@@ -62,7 +62,7 @@ struct dnnl_graph_compiler_context {
 struct dnnl_graph_compiler_tensor {
     size_t id;
     uint8_t ndims;
-    size_t *dims;
+    int64_t *dims;
     void *data;
 };
 

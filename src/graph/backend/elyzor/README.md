@@ -17,5 +17,3 @@ Currently, it's only able to print "hello world" strings from [compile](https://
 1. The graph compiler's front-end [uses certain functionality](https://github.com/dchigarev/oneDNN/blob/c0a48558295dfcabf84c6ab68e6311ac95c98d6b/src/graph/backend/graph_compiler/target_machine.hpp#L19-L24)
    from its core to detect which CPU instructions are available and [define patterns accordingly](https://github.com/dchigarev/oneDNN/blob/c0a48558295dfcabf84c6ab68e6311ac95c98d6b/src/graph/backend/graph_compiler/compiler_backend.cpp#L54).
    In elyzor we don't have this functionality, so we are [assuming that all instructions are available](https://github.com/dchigarev/oneDNN/blob/c0a48558295dfcabf84c6ab68e6311ac95c98d6b/src/graph/backend/elyzor/target_machine.hpp#L19-L27).
-2. The [compile](https://github.com/dchigarev/oneDNN/blob/c0a48558295dfcabf84c6ab68e6311ac95c98d6b/src/graph/backend/elyzor/compiler_partition_impl.cpp#L142-L146)
-   and [execute](https://github.com/dchigarev/oneDNN/blob/c0a48558295dfcabf84c6ab68e6311ac95c98d6b/src/graph/backend/elyzor/compiler_partition_impl.cpp#L185-L188) methods are dummies for now
