@@ -79,10 +79,8 @@ graph_compiler_loader::graph_compiler_loader() {
         if (!is_supported_api_version(lib_v->api_version)) {
             std::stringstream ss;
             ss << "Unsupported GC API version found in " << DNNL_GC_LIB_NAME
-               << "; Supported API version: "
-               << utils::gc_version_to_string(supported_api_v_)
-               << "; Recieved: "
-               << utils::gc_version_to_string(lib_v->api_version);
+               << "; Supported API version: " << supported_api_v_
+               << "; Recieved: " << lib_v->api_version;
             throw std::runtime_error(ss.str());
         }
 
@@ -120,8 +118,7 @@ graph_compiler_loader::~graph_compiler_loader() {
     dnnl::impl::graph::elyzor::graph_compiler_loader::get_vtable().fn_name( \
             __VA_ARGS__);
 
-const dnnl_graph_compiler_version *dnnl_graph_compiler_get_version(
-        void) {
+const dnnl_graph_compiler_version *dnnl_graph_compiler_get_version(void) {
     return LOAD_AND_CALL(dnnl_graph_compiler_get_version);
 }
 

@@ -96,25 +96,24 @@ std::vector<op_kind_t> get_supported_op_kinds() {
     return ret;
 }
 
-std::string gc_version_to_string(const dnnl_graph_compiler_version &v) {
-    std::stringstream ss;
-    ss << "API version:\n\t" << gc_version_to_string(v.api_version)
-       << "\nGC version:\n\t" << gc_version_to_string(v.gc_version);
-    return ss.str();
-}
-
-std::string gc_version_to_string(
-        const dnnl_graph_compiler_version::version &v) {
-    std::stringstream ss;
-    // Cast uint8_t to int before inserting into the stringstream
-    // as otherwise they're interpreted as characters
-    ss << static_cast<int>(v.major) << "." << static_cast<int>(v.minor) << "."
-       << static_cast<int>(v.patch) << " " << v.hash;
-    return ss.str();
-}
-
 } // namespace utils
 } // namespace elyzor
 } // namespace graph
 } // namespace impl
 } // namespace dnnl
+
+std::ostream &operator<<(
+        std::ostream &os, const dnnl_graph_compiler_version &v) {
+    os << "API version:\n\t" << v.api_version << "\nGC version:\n\t"
+       << v.gc_version;
+    return os;
+}
+
+std::ostream &operator<<(
+        std::ostream &os, const dnnl_graph_compiler_version::version &v) {
+    // Cast uint8_t to int before inserting into the stringstream
+    // as otherwise they're interpreted as characters
+    os << static_cast<int>(v.major) << "." << static_cast<int>(v.minor) << "."
+       << static_cast<int>(v.patch) << " " << v.hash;
+    return os;
+}

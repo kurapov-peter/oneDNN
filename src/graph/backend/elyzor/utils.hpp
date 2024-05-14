@@ -60,8 +60,6 @@ inline dims get_dense_strides(const dims &shape) {
     return strides;
 }
 
-std::string gc_version_to_string(const dnnl_graph_compiler_version &v);
-std::string gc_version_to_string(const dnnl_graph_compiler_version::version &v);
 const std::unordered_map<op_kind_t, std::string, enum_hash_t> &
 get_supported_ops();
 std::vector<op_kind_t> get_supported_op_kinds();
@@ -81,4 +79,10 @@ std::vector<op_kind_t> get_supported_op_kinds();
 } // namespace graph
 } // namespace impl
 } // namespace dnnl
+
+std::ostream &operator<<(
+        std::ostream &os, const dnnl_graph_compiler_version &v);
+std::ostream &operator<<(
+        std::ostream &os, const dnnl_graph_compiler_version::version &v);
+
 #endif
