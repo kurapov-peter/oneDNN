@@ -120,36 +120,34 @@ graph_compiler_loader::~graph_compiler_loader() {
     dnnl::impl::graph::elyzor::graph_compiler_loader::get_vtable().fn_name( \
             __VA_ARGS__);
 
-DNNL_API const dnnl_graph_compiler_version *dnnl_graph_compiler_get_version(
+const dnnl_graph_compiler_version *dnnl_graph_compiler_get_version(
         void) {
     return LOAD_AND_CALL(dnnl_graph_compiler_get_version);
 }
 
-DNNL_API dnnl_status_t dnnl_graph_compiler_create(
+dnnl_status_t dnnl_graph_compiler_create(
         const struct dnnl_graph_compiler_context *ctx,
         const struct dnnl_graph_compiler **gc) {
     return LOAD_AND_CALL(dnnl_graph_compiler_create, ctx, gc);
 }
 
-DNNL_API void dnnl_graph_compiler_destroy(
-        const struct dnnl_graph_compiler *gc) {
+void dnnl_graph_compiler_destroy(const struct dnnl_graph_compiler *gc) {
     return LOAD_AND_CALL(dnnl_graph_compiler_destroy, gc);
 }
 
-DNNL_API dnnl_status_t dnnl_graph_compiler_compile(
-        const struct dnnl_graph_compiler *gc, const char *graph_json,
+dnnl_status_t dnnl_graph_compiler_compile(const struct dnnl_graph_compiler *gc,
+        const char *graph_json,
         const struct dnnl_graph_compiler_executable **exe) {
     return LOAD_AND_CALL(dnnl_graph_compiler_compile, gc, graph_json, exe);
 }
 
-DNNL_API void dnnl_graph_compiler_destroy_executable(
+void dnnl_graph_compiler_destroy_executable(
         const struct dnnl_graph_compiler *gc,
         const struct dnnl_graph_compiler_executable *exe) {
     LOAD_AND_CALL(dnnl_graph_compiler_destroy_executable, gc, exe);
 }
 
-DNNL_API dnnl_status_t dnnl_graph_compiler_execute(
-        const struct dnnl_graph_compiler *gc,
+dnnl_status_t dnnl_graph_compiler_execute(const struct dnnl_graph_compiler *gc,
         const struct dnnl_graph_compiler_executable *exe,
         dnnl_graph_compiler_tensor *inputs,
         dnnl_graph_compiler_tensor *outputs) {
