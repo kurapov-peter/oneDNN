@@ -78,4 +78,104 @@ inline void construct_mul_quantize_subgraph(graph::graph_t *agraph,
     agraph->add_op(&quantize);
 }
 
+std::vector<dnnl_graph_compiler_tensor> test_tensor_to_gc_tensor(
+        std::vector<test_tensor> &in) {
+    std::vector<dnnl_graph_compiler_tensor> res;
+    res.reserve(in.size());
+
+    for (auto &test_tensr : in) {
+        auto tensr = test_tensr.get();
+        auto lt = tensr.get_logical_tensor();
+        res.emplace_back(dnnl_graph_compiler_tensor {.id = lt.id,
+                .ndims = static_cast<uint8_t>(lt.ndims),
+                .dims = lt.dims,
+                .data = tensr.get_data_handle()});
+    }
+
+    return res;
+}
+
+static void compile_execution_pipeline(impl::graph_t &agraph,
+        int expected_part_size,
+        std::function<void(ltsr_vec &, ltsr_vec &)> dynamic_callback
+        = nullptr) {
+    auto &elyzor_backend_ptr = impl::elyzor::elyzor_backend_t::get_singleton();
+    elyzor_backend_ptr.get_partitions(agraph, impl::partition_policy::fusion);
+    auto partitions = agraph.get_partitions();
+    ASSERT_EQ(partitions.size(), static_cast<size_t>(expected_part_size));
+    if (dynamic_callback) { ASSERT_EQ(expected_part_size, 1); }
+    // TODO(yifei): generalize the logic here
+    // sort partitions to run forward first according to num ops
+    std::sort(partitions.begin(), partitions.end(),
+            [](std::shared_ptr<impl::partition_impl_t> a,
+                    std::shared_ptr<impl::partition_impl_t> b) {
+                return a->get_ops().size() < b->get_ops().size();
+            });
+
+    std::unordered_map<size_t, impl::logical_tensor_t> lt_info_map;
+
+    for (size_t i = 0; i < partitions.size(); ++i) {
+        impl::partition_t p;
+        p.init(partitions[i]);
+        auto partition_inputs = p.get_inputs();
+        auto partition_outputs = p.get_outputs();
+
+        // replace partition inputs info if needed
+        for (size_t i = 0; i < partition_inputs.size(); ++i) {
+            if (lt_info_map.find(partition_inputs[i].id) != lt_info_map.end()) {
+                partition_inputs[i] = lt_info_map[partition_inputs[i].id];
+            }
+        }
+
+        std::vector<const impl::logical_tensor_t *> inputs;
+        std::vector<const impl::logical_tensor_t *> outputs;
+        for (auto &lt : partition_inputs) {
+            inputs.push_back(&lt);
+        }
+        for (auto &lt : partition_outputs) {
+            outputs.push_back(&lt);
+        }
+        impl::compiled_partition_t cp(p);
+        impl::engine_t &eng = *get_engine();
+        ASSERT_EQ(p.compile(&cp, inputs, outputs, &eng), impl::status::success);
+
+        std::vector<test_tensor> execution_inputs;
+        std::vector<test_tensor> execution_outputs;
+        partition_outputs.clear();
+        for (auto &lt : outputs) {
+            impl::logical_tensor_t compiled_output;
+            cp.query_logical_tensor(lt->id, &compiled_output);
+            partition_outputs.push_back(compiled_output);
+            assert(compiled_output.ndims > -1);
+        }
+        if (dynamic_callback) {
+            dynamic_callback(partition_inputs, partition_outputs);
+        }
+        for (auto &lt : partition_inputs) {
+            assert(lt.ndims > -1);
+            lt_info_map[lt.id] = lt;
+        }
+        for (auto &lt : partition_outputs) {
+            assert(lt.ndims > -1);
+            lt_info_map[lt.id] = lt;
+        }
+
+        for (auto &lt : partition_inputs) {
+            test_tensor placeholder(lt, &eng);
+            execution_inputs.push_back(placeholder);
+        }
+        for (auto &lt : partition_outputs) {
+            test_tensor placeholder(lt, &eng);
+            execution_outputs.push_back(placeholder);
+        }
+
+        impl::stream_t &strm = *get_stream();
+        ASSERT_EQ(cp.execute(&strm,
+                          test_tensor::to_graph_tensor(execution_inputs),
+                          test_tensor::to_graph_tensor(execution_outputs)),
+                impl::status::success);
+        strm.wait();
+    }
+}
+
 #endif
