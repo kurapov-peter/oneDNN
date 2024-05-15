@@ -106,6 +106,13 @@ public:
 
     std::string get_name() const { return pname_; }
 
+#ifndef NDEBUG
+    // get protected 'copied_ops_' field, should only be used in testing
+    std::vector<std::shared_ptr<graph::op_t>> get_copied_ops() {
+        return copied_ops_;
+    }
+#endif
+
 protected:
     bool is_init_ = false;
     mutable std::vector<std::shared_ptr<graph::op_t>> copied_ops_;
