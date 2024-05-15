@@ -51,6 +51,17 @@ func_ptr_type load_func(void *handle, const char *func_name) {
     return func;
 }
 
+const dnnl_graph_compiler_version::version
+        graph_compiler_loader::supported_api_v_ {DNNL_GC_API_V_MAJOR,
+                DNNL_GC_API_V_MINOR, DNNL_GC_API_V_PATCH, .hash = ""};
+
+bool graph_compiler_loader::is_supported_api_version(
+        const dnnl_graph_compiler_version::version &api_v) {
+    return api_v.major == supported_api_v_.major
+            && api_v.minor == supported_api_v_.minor
+            && api_v.patch == supported_api_v_.patch;
+}
+
 graph_compiler_loader::graph_compiler_loader() {
     handle_ = dlopen(DNNL_GC_LIB_NAME, RTLD_LAZY | RTLD_DEEPBIND);
     if (!handle_) {
@@ -60,6 +71,19 @@ graph_compiler_loader::graph_compiler_loader() {
     }
 
     try {
+        vtable_.dnnl_graph_compiler_get_version
+                = load_func<dnnl_graph_compiler_get_version_t>(
+                        handle_, "dnnl_graph_compiler_get_version");
+
+        auto lib_v = vtable_.dnnl_graph_compiler_get_version();
+        if (!is_supported_api_version(lib_v->api_version)) {
+            std::stringstream ss;
+            ss << "Unsupported GC API version found in " << DNNL_GC_LIB_NAME
+               << "; Supported API version: " << supported_api_v_
+               << "; Recieved: " << lib_v->api_version;
+            throw std::runtime_error(ss.str());
+        }
+
         vtable_.dnnl_graph_compiler_create
                 = load_func<dnnl_graph_compiler_create_t>(
                         handle_, "dnnl_graph_compiler_create");
@@ -93,6 +117,10 @@ graph_compiler_loader::~graph_compiler_loader() {
 #define LOAD_AND_CALL(fn_name, ...) \
     dnnl::impl::graph::elyzor::graph_compiler_loader::get_vtable().fn_name( \
             __VA_ARGS__);
+
+const dnnl_graph_compiler_version *dnnl_graph_compiler_get_version(void) {
+    return LOAD_AND_CALL(dnnl_graph_compiler_get_version);
+}
 
 dnnl_status_t dnnl_graph_compiler_create(
         const struct dnnl_graph_compiler_context *ctx,

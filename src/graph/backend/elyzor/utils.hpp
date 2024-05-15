@@ -22,6 +22,7 @@
 #include <vector>
 #include <unordered_map>
 
+#include "include/dnnl_graph_compiler.h"
 #include <graph/interface/c_types_map.hpp>
 
 namespace dnnl {
@@ -78,4 +79,10 @@ std::vector<op_kind_t> get_supported_op_kinds();
 } // namespace graph
 } // namespace impl
 } // namespace dnnl
+
+std::ostream &operator<<(
+        std::ostream &os, const dnnl_graph_compiler_version &v);
+std::ostream &operator<<(
+        std::ostream &os, const dnnl_graph_compiler_version::version &v);
+
 #endif
