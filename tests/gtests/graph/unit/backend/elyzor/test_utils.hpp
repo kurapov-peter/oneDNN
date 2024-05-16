@@ -27,14 +27,6 @@ namespace utils = dnnl::graph::tests::unit::utils;
 
 using ltsr_vec = std::vector<impl::logical_tensor_t>;
 
-// ONEDNN_ENABLE_ELYZOR_GRAPH_COMPILER_LIB_TESTS=0 - skip tests that require 'libgraph_compiler.so' loading
-#define SKIP_WHEN_NO_LIB_TESTS() \
-    if (!dnnl::impl::getenv_int_user("ENABLE_ELYZOR_GRAPH_COMPILER_LIB_TESTS", \
-                /*default_value=*/1)) { \
-        GTEST_SKIP(); \
-        return; \
-    }
-
 #define DEFINE_DEFAULT_PER_TENSOR_QUANT_ATTR(name) \
     name.set_attr(graph::op_attr::scales, std::vector<float>({0.12f})); \
     name.set_attr(graph::op_attr::zps, std::vector<int64_t>({2})); \

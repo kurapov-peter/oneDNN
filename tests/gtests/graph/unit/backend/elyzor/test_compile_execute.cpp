@@ -124,8 +124,6 @@ TEST(ElyzorSanityTests, ElyzorBackendRegistration) {
 // Verify that 'graph_compiler_loader::get_vtable()' returns
 // vtable with valid function pointers
 TEST(ElyzorSanityTests, CompilerLoaderValidVtable) {
-    SKIP_WHEN_NO_LIB_TESTS();
-
     auto vtable = impl::elyzor::graph_compiler_loader::get_vtable();
 
     ASSERT_NE(vtable.dnnl_graph_compiler_get_version, nullptr);
@@ -141,8 +139,6 @@ TEST(ElyzorSanityTests, CompilerLoaderValidVtable) {
 // implementation for 'compile/execute' for now. The only thing that is verified is successful
 // return status
 TEST(ElyzorSanityTests, MulQuantizeGCAPI) {
-    SKIP_WHEN_NO_LIB_TESTS();
-
     auto eng = get_engine();
     utils::id_generator id_gen;
     impl::graph_t agraph;
@@ -188,8 +184,6 @@ TEST(ElyzorSanityTests, MulQuantizeGCAPI) {
 // implementation for 'compile/execute' for now. The only thing that is verified is successful
 // return status
 TEST(ElyzorSanityTests, MulQuantizeOneDNNGraph) {
-    SKIP_WHEN_NO_LIB_TESTS();
-
     utils::id_generator id_gen;
     impl::graph_t agraph;
     impl::dims initial_shapes = {{10}, {10}};
