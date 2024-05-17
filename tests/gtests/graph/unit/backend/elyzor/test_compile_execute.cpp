@@ -13,6 +13,7 @@
 * See the License for the specific language governing permissions and
 * limitations under the License.
 *******************************************************************************/
+#include "backend/elyzor/compiler_loader.hpp"
 #include "backend/elyzor/elyzor_backend.hpp"
 #include "backend/elyzor/elyzor_partition_impl.hpp"
 #include "interface/allocator.hpp"
@@ -27,7 +28,7 @@
 
 // Verify that after calling 'elyzor_partition_impl_t::infer_shape' the input shapes
 // are propagated to the 'copied_ops_' field (the one that is used to dump the graph to JSON)
-TEST(ElyzorGraphTest, CompleteInputShapes) {
+TEST(ElyzorSanityTests, CompleteInputShapes) {
     utils::id_generator id_gen;
     impl::graph_t agraph;
     impl::dims initial_shapes = {};
@@ -105,3 +106,89 @@ TEST(ElyzorGraphTest, CompleteInputShapes) {
 }
 
 #endif
+
+// Verify that 'elyzor' backend is successfully registered
+// and available via the backends registry
+TEST(ElyzorSanityTests, ElyzorBackendRegistration) {
+    std::vector<const graph::backend_t *> &backends
+            = graph::backend_registry_t::get_singleton()
+                      .get_registered_backends();
+    auto elyzor_backend = std::find_if(
+            backends.begin(), backends.end(), [](const graph::backend_t *bkd) {
+                return bkd->get_name() == "elyzor_compiler_backend";
+            });
+    ASSERT_NE(elyzor_backend, backends.end());
+    EXPECT_FLOAT_EQ((*elyzor_backend)->get_priority(), 3.0);
+}
+
+// Verify that 'graph_compiler_loader::get_vtable()' returns
+// vtable with valid function pointers
+TEST(ElyzorSanityTests, CompilerLoaderValidVtable) {
+    auto vtable = impl::elyzor::graph_compiler_loader::get_vtable();
+
+    ASSERT_NE(vtable.dnnl_graph_compiler_get_version, nullptr);
+    ASSERT_NE(vtable.dnnl_graph_compiler_create, nullptr);
+    ASSERT_NE(vtable.dnnl_graph_compiler_destroy, nullptr);
+    ASSERT_NE(vtable.dnnl_graph_compiler_compile, nullptr);
+    ASSERT_NE(vtable.dnnl_graph_compiler_destroy_executable, nullptr);
+    ASSERT_NE(vtable.dnnl_graph_compiler_execute, nullptr);
+}
+
+// Verify that calling GC API results in actual calls to GC by executing 'mul_quantize' pattern.
+// The test doesn't verify that 'execute' produces valid output buffers as there's no actual
+// implementation for 'compile/execute' for now. The only thing that is verified is successful
+// return status
+TEST(ElyzorSanityTests, MulQuantizeGCAPI) {
+    auto eng = get_engine();
+    utils::id_generator id_gen;
+    impl::graph_t agraph;
+    impl::dims initial_shapes = {{10}, {10}};
+    construct_mul_quantize_subgraph(&agraph, id_gen, initial_shapes);
+    agraph.finalize();
+    agraph.infer_shape();
+
+    std::stringstream ss;
+    agraph.serialize(ss);
+    std::string graph_json = ss.str();
+
+    const dnnl_graph_compiler_context ctx {};
+    const dnnl_graph_compiler *gc;
+    ASSERT_EQ(dnnl_graph_compiler_create(&ctx, &gc), impl::status::success);
+    ASSERT_NE(gc, nullptr);
+
+    const dnnl_graph_compiler_executable *exe;
+    ASSERT_EQ(dnnl_graph_compiler_compile(gc, graph_json.data(), &exe),
+            impl::status::success);
+    ASSERT_NE(exe, nullptr);
+
+    std::vector<test_tensor> test_args;
+    for (auto &val : agraph.get_input_values()) {
+        test_args.emplace_back(val->get_logical_tensor(), eng);
+    }
+    for (auto &val : agraph.get_output_values()) {
+        test_args.emplace_back(val->get_logical_tensor(), eng);
+    }
+    std::vector<dnnl_graph_compiler_tensor> args
+            = test_tensor_to_gc_tensor(test_args);
+
+    ASSERT_EQ(dnnl_graph_compiler_execute(gc, exe, args.data(),
+                      args.data() + agraph.get_input_values().size()),
+            impl::status::success);
+
+    dnnl_graph_compiler_destroy_executable(gc, exe);
+    dnnl_graph_compiler_destroy(gc);
+}
+
+// Execute 'mul_quantize' pattern via Elyzor backend using oneDNN graph.
+// The test doesn't verify that 'execute' produces valid output buffers as there's no actual
+// implementation for 'compile/execute' for now. The only thing that is verified is successful
+// return status
+TEST(ElyzorSanityTests, MulQuantizeOneDNNGraph) {
+    utils::id_generator id_gen;
+    impl::graph_t agraph;
+    impl::dims initial_shapes = {{10}, {10}};
+    construct_mul_quantize_subgraph(&agraph, id_gen, initial_shapes);
+    agraph.finalize();
+
+    compile_execution_pipeline(agraph, 1);
+}
