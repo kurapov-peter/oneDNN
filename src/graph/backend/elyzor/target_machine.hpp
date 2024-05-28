@@ -16,35 +16,26 @@
 #ifndef BACKEND_ELYZOR_TARGET_MACHINE_HPP
 #define BACKEND_ELYZOR_TARGET_MACHINE_HPP
 
-// An internal GC's functionality that provides machine flags,
-// assuming all the flags are true for now
-// #include "core/src/compiler/config/context.hpp"
-// #include "runtime/config.hpp"
+#include "cpu/x64/cpu_isa_traits.hpp"
 
 #define REQUIRE_AVX512_BEGIN \
-    if (true) {
-    // if (::dnnl::impl::graph::gc::get_default_context() \
-    //                 ->machine_.cpu_flags_.fAVX512F) {
+    if (dnnl::impl::cpu::x64::cpu().has(Xbyak::util::Cpu::tAVX512F)) {
 #define REQUIRE_VNNI_AMXINT8_BEGIN \
-    if (true) {
-    // if (::dnnl::impl::graph::gc::get_default_context() \
-    //                 ->machine_.cpu_flags_.fAVX512VNNI \
-    //         || ::dnnl::impl::graph::gc::get_default_context() \
-    //                    ->machine_.cpu_flags_.fAVX512AMXINT8) {
+    if (dnnl::impl::cpu::x64::cpu().has(Xbyak::util::Cpu::tAVX512_VNNI) \
+            || (dnnl::impl::cpu::x64::cpu().has(Xbyak::util::Cpu::tAVX512F) \
+                    && dnnl::impl::cpu::x64::cpu().has( \
+                            Xbyak::util::Cpu::tAMX_INT8))) {
 #define REQUIRE_BF16_AMXBF16_BEGIN \
-    if (true) {
-    // if (::dnnl::impl::graph::gc::get_default_context() \
-    //                 ->machine_.cpu_flags_.fAVX512BF16 \
-    //         || ::dnnl::impl::graph::gc::get_default_context() \
-    //                    ->machine_.cpu_flags_.fAVX512AMXBF16) {
+    if (dnnl::impl::cpu::x64::cpu().has(Xbyak::util::Cpu::tAVX512_BF16) \
+            || (dnnl::impl::cpu::x64::cpu().has(Xbyak::util::Cpu::tAVX512F) \
+                    && dnnl::impl::cpu::x64::cpu().has( \
+                            Xbyak::util::Cpu::tAMX_BF16))) {
 #define REQUIRE_AMX_BEGIN \
-    if (true) {
-    // if (dnnl::impl::graph::gc::get_default_context() \
-    //                 ->machine_.cpu_flags_.fAVX512AMXTILE) {
+    if (dnnl::impl::cpu::x64::cpu().has(Xbyak::util::Cpu::tAVX512F) \
+            && dnnl::impl::cpu::x64::cpu().has(Xbyak::util::Cpu::tAMX_TILE)) {
 #define REQUIRE_AMXBF16_BEGIN \
-    if (true){
-    // if (dnnl::impl::graph::gc::get_default_context() \
-    //                 ->machine_.cpu_flags_.fAVX512AMXBF16) {
+    if (dnnl::impl::cpu::x64::cpu().has(Xbyak::util::Cpu::tAVX512F) \
+            && dnnl::impl::cpu::x64::cpu().has(Xbyak::util::Cpu::tAMX_BF16)) {
 #define REQUIRE_AVX512_END }
 #define REQUIRE_VNNI_AMXINT8_END }
 #define REQUIRE_BF16_AMXBF16_END }
