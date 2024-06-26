@@ -40,11 +40,9 @@ typedef dnnl_status_t (*dnnl_graph_compiler_compile_t)(
         const struct dnnl_graph_compiler_executable **exe);
 
 typedef void (*dnnl_graph_compiler_destroy_executable_t)(
-        const struct dnnl_graph_compiler *gc,
         const struct dnnl_graph_compiler_executable *exe);
 
 typedef dnnl_status_t (*dnnl_graph_compiler_execute_t)(
-        const struct dnnl_graph_compiler *gc,
         const struct dnnl_graph_compiler_executable *exe,
         dnnl_graph_compiler_tensor *inputs,
         dnnl_graph_compiler_tensor *outputs);

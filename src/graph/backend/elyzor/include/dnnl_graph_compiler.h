@@ -51,10 +51,6 @@ struct dnnl_graph_compiler_version {
 
 struct dnnl_graph_compiler_context {
     uint32_t num_threads;
-
-    void *(*allocator)(size_t size);
-
-    void (*deallocator)(void *ptr);
 };
 
 struct dnnl_graph_compiler_tensor {
@@ -77,10 +73,9 @@ dnnl_status_t dnnl_graph_compiler_compile(const struct dnnl_graph_compiler *gc,
         const struct dnnl_graph_compiler_executable **exe);
 
 void dnnl_graph_compiler_destroy_executable(
-        const struct dnnl_graph_compiler *gc,
         const struct dnnl_graph_compiler_executable *exe);
 
-dnnl_status_t dnnl_graph_compiler_execute(const struct dnnl_graph_compiler *gc,
+dnnl_status_t dnnl_graph_compiler_execute(
         const struct dnnl_graph_compiler_executable *exe,
         dnnl_graph_compiler_tensor *inputs,
         dnnl_graph_compiler_tensor *outputs);

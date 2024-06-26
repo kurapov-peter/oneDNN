@@ -139,14 +139,13 @@ dnnl_status_t dnnl_graph_compiler_compile(const struct dnnl_graph_compiler *gc,
 }
 
 void dnnl_graph_compiler_destroy_executable(
-        const struct dnnl_graph_compiler *gc,
         const struct dnnl_graph_compiler_executable *exe) {
-    LOAD_AND_CALL(dnnl_graph_compiler_destroy_executable, gc, exe);
+    LOAD_AND_CALL(dnnl_graph_compiler_destroy_executable, exe);
 }
 
-dnnl_status_t dnnl_graph_compiler_execute(const struct dnnl_graph_compiler *gc,
+dnnl_status_t dnnl_graph_compiler_execute(
         const struct dnnl_graph_compiler_executable *exe,
         dnnl_graph_compiler_tensor *inputs,
         dnnl_graph_compiler_tensor *outputs) {
-    return LOAD_AND_CALL(dnnl_graph_compiler_execute, gc, exe, inputs, outputs);
+    return LOAD_AND_CALL(dnnl_graph_compiler_execute, exe, inputs, outputs);
 }
