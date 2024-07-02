@@ -154,9 +154,7 @@ graph::status_t elyzor_partition_impl_t::compile(
                 "Graph compiler backend only supports cpu engine");
 
         // TODO: maybe cache ctx and gc in a static variable
-        const dnnl_graph_compiler_context ctx {
-                /*num_threads=*/std::thread::hardware_concurrency(),
-                /*allocator=*/nullptr, /*deallocator=*/nullptr};
+        const dnnl_graph_compiler_context ctx {};
         const dnnl_graph_compiler *gc_tmp;
         WRAP_GC_CALL(dnnl_graph_compiler_create(&ctx, &gc_tmp),
                 "Failed to create graph compiler object");
@@ -175,7 +173,7 @@ graph::status_t elyzor_partition_impl_t::compile(
         // TODO: this looks ugly, let's hope we rewrite GC logic to use C++ wrappers soon
         const std::shared_ptr<const dnnl_graph_compiler_executable> exe(
                 exe_tmp, [gc](const dnnl_graph_compiler_executable *p) {
-                    dnnl_graph_compiler_destroy_executable(gc.get(), p);
+                    dnnl_graph_compiler_destroy_executable(p);
                 });
 
         auto pimpl = std::make_shared<elyzor_compiled_partition_impl_t>(
@@ -246,7 +244,7 @@ graph::status_t elyzor_compiled_partition_impl_t::execute(
                     static_cast<int64_t *>(lt.dims), out.get_data_handle()});
         }
 
-        WRAP_GC_CALL(dnnl_graph_compiler_execute(gc_.get(), exe_.get(),
+        WRAP_GC_CALL(dnnl_graph_compiler_execute(exe_.get(),
                              args.data(), args.data() + inputs.size()),
                 "Failed to execute partition");
         return status::success;

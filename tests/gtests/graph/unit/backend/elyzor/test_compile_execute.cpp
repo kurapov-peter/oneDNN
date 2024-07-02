@@ -151,7 +151,7 @@ TEST(ElyzorSanityTests, MulQuantizeGCAPI) {
     agraph.serialize(ss);
     std::string graph_json = ss.str();
 
-    const dnnl_graph_compiler_context ctx {};
+    const dnnl_graph_compiler_context ctx {0};
     const dnnl_graph_compiler *gc;
     ASSERT_EQ(dnnl_graph_compiler_create(&ctx, &gc), impl::status::success);
     ASSERT_NE(gc, nullptr);
@@ -171,11 +171,11 @@ TEST(ElyzorSanityTests, MulQuantizeGCAPI) {
     std::vector<dnnl_graph_compiler_tensor> args
             = test_tensor_to_gc_tensor(test_args);
 
-    ASSERT_EQ(dnnl_graph_compiler_execute(gc, exe, args.data(),
+    ASSERT_EQ(dnnl_graph_compiler_execute(exe, args.data(),
                       args.data() + agraph.get_input_values().size()),
             impl::status::success);
 
-    dnnl_graph_compiler_destroy_executable(gc, exe);
+    dnnl_graph_compiler_destroy_executable(exe);
     dnnl_graph_compiler_destroy(gc);
 }
 
