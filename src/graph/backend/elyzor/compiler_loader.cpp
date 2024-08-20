@@ -18,17 +18,17 @@
 
 #ifdef _WIN32
 #include <windows.h>
-#define DNNL_GC_LIB_NAME "graph_compiler.dll"
+#define DNNL_GC_LIB_NAME "GcDnnlApi.dll"
 #define dlopen(libname, flags) LoadLibrary(libname)
 #define dlsym(handle, funcname) GetProcAddress((HMODULE)handle, funcname)
 #define dlclose(handle) FreeLibrary((HMODULE)handle)
 #define dlerror() "an error occured when working with " #DNNL_GC_LIB_NAME
 #elif __APPLE__
 #include <dlfcn.h>
-#define DNNL_GC_LIB_NAME "libgraph_compiler.dylib"
+#define DNNL_GC_LIB_NAME "libGcDnnlApi.dylib"
 #else
 #include <dlfcn.h>
-#define DNNL_GC_LIB_NAME "libgraph_compiler.so"
+#define DNNL_GC_LIB_NAME "libGcDnnlApi.so"
 #endif
 
 namespace dnnl {
